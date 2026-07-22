@@ -1,0 +1,17 @@
+# Environments
+.venv/
+venv/
+.env
+*.env
+!*.env.example
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Local/generated state (hands-on demo data, not source)
+memory_store.json

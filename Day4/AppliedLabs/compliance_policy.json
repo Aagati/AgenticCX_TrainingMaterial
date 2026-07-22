@@ -1,0 +1,34 @@
+{
+  "strict": {
+    "roles": {
+      "customer": { "can_cancel_own_order": true,  "can_cancel_any_order": false, "refund_limit": 1500 },
+      "agent":    { "can_cancel_own_order": true,  "can_cancel_any_order": true,  "refund_limit": 15000 },
+      "supervisor": { "can_cancel_own_order": true, "can_cancel_any_order": true, "refund_limit": 999999 }
+    },
+    "consent": {
+      "required_for_tools": ["apply_refund", "cancel_order"],
+      "disclosure_text": "This assistant may take account actions on your behalf, including cancellations and refunds. Do you consent?"
+    },
+    "retention": {
+      "order_record_days": 365,
+      "audit_log_days": 2555,
+      "pii_fields": ["card_number", "email"]
+    }
+  },
+  "lax": {
+    "roles": {
+      "customer": { "can_cancel_own_order": true, "can_cancel_any_order": false, "refund_limit": 50000 },
+      "agent":    { "can_cancel_own_order": true, "can_cancel_any_order": true,  "refund_limit": 999999 },
+      "supervisor": { "can_cancel_own_order": true, "can_cancel_any_order": true, "refund_limit": 999999 }
+    },
+    "consent": {
+      "required_for_tools": [],
+      "disclosure_text": "This assistant may take account actions on your behalf."
+    },
+    "retention": {
+      "order_record_days": 30,
+      "audit_log_days": 90,
+      "pii_fields": ["card_number", "email"]
+    }
+  }
+}

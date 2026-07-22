@@ -1,0 +1,32 @@
+[
+  {
+    "id": "POL-001",
+    "title": "Two-Wheeler Policy - Claim Filing Window",
+    "text": "Under the Standard Two-Wheeler Insurance Policy, the insured must intimate the claim to the insurer within 48 hours of the incident. Claims intimated after 30 days from the date of loss without valid justification may be rejected. The insured must also file an FIR for theft or third-party injury claims within 24 hours."
+  },
+  {
+    "id": "POL-002",
+    "title": "Two-Wheeler Policy - No Claim Bonus (NCB)",
+    "text": "No Claim Bonus is a discount on the own-damage premium offered for every claim-free year, starting at 20% after year 1 and increasing up to a maximum of 50% after 5 consecutive claim-free years. Filing even one claim during a policy year resets the NCB to 0% at the next renewal."
+  },
+  {
+    "id": "POL-003",
+    "title": "Health Policy - Waiting Period for Pre-existing Diseases",
+    "text": "Pre-existing diseases disclosed at the time of proposal are covered after a waiting period of 36 months of continuous policy renewal. Specific illnesses such as cataract, hernia, and joint replacement surgery (non-accidental) carry a separate waiting period of 24 months."
+  },
+  {
+    "id": "POL-004",
+    "title": "Health Policy - Room Rent Sub-limit",
+    "text": "For hospitalization under the Silver plan, room rent is capped at 1% of the sum insured per day. If the insured opts for a room with rent exceeding this cap, all associated hospital charges (doctor fees, nursing, ICU) are reimbursed proportionately, not just the room rent difference."
+  },
+  {
+    "id": "POL-005",
+    "title": "Motor Policy - Zero Depreciation Add-on",
+    "text": "The Zero Depreciation add-on waives depreciation deduction on plastic, rubber, and fibre parts during claim settlement, but is available only for vehicles up to 5 years old and can be used a maximum of 2 times during the policy period for private cars."
+  },
+  {
+    "id": "POL-006",
+    "title": "General - Free Look Period",
+    "text": "All new life and health insurance policies come with a free look period of 15 days (30 days for policies sold through distance marketing) from the date of receipt of the policy document, during which the policyholder may cancel and receive a refund after deduction of proportionate risk premium and stamp duty."
+  }
+]

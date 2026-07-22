@@ -1,0 +1,173 @@
+{
+  "_readme": "12 simulated banking-support conversations, arriving as a 'live stream'. Each has turn-by-turn customer messages (already labelled with a sentiment_hint for you to key your lexicon off, plus a hidden 'true_sentiment_trend' you can use to check your own scorer), a resolved flag, and — where relevant — an escalated flag with an escalation_reason. Build your online QA pipeline against this file.",
+  "conversations": [
+    {
+      "id": "B01",
+      "intent": "card_dispute",
+      "turns": [
+        {"speaker": "customer", "text": "I see a charge on my card I don't recognize, this is worrying."},
+        {"speaker": "agent", "text": "I understand the concern — let's get this sorted. Can you confirm the last 4 digits of the card?"},
+        {"speaker": "customer", "text": "Sure, 4471."},
+        {"speaker": "agent", "text": "Thanks, I've filed a dispute for the charge and issued a temporary credit."},
+        {"speaker": "customer", "text": "Oh great, thank you so much, that's a relief."}
+      ],
+      "resolved": true,
+      "escalated": false,
+      "escalation_reason": null
+    },
+    {
+      "id": "B02",
+      "intent": "balance_query",
+      "turns": [
+        {"speaker": "customer", "text": "What's my current balance?"},
+        {"speaker": "agent", "text": "Your current available balance is $2,340.12."},
+        {"speaker": "customer", "text": "Perfect, thanks."}
+      ],
+      "resolved": true,
+      "escalated": false,
+      "escalation_reason": null
+    },
+    {
+      "id": "B03",
+      "intent": "fraud_alert",
+      "turns": [
+        {"speaker": "customer", "text": "I got a fraud alert text, I'm really scared, is my money safe?"},
+        {"speaker": "agent", "text": "I hear you, let's check right now. Your account shows no unauthorized transactions in the last 24 hours."},
+        {"speaker": "customer", "text": "Are you sure? I'm still nervous about this."},
+        {"speaker": "agent", "text": "I understand. As an extra precaution I've frozen the card and I'm connecting you with our fraud specialist team now."}
+      ],
+      "resolved": true,
+      "escalated": true,
+      "escalation_reason": "customer_anxiety_beyond_agent_scope"
+    },
+    {
+      "id": "B04",
+      "intent": "card_dispute",
+      "turns": [
+        {"speaker": "customer", "text": "There's a charge I don't recognize again, this is the second time this month!"},
+        {"speaker": "agent", "text": "I'm sorry to hear that. Let me look into it."},
+        {"speaker": "customer", "text": "This is so frustrating, your app keeps failing me."},
+        {"speaker": "agent", "text": "I understand the frustration. I'm unable to process a second dispute this month automatically — let me connect you with a specialist."}
+      ],
+      "resolved": false,
+      "escalated": true,
+      "escalation_reason": "policy_limit_reached"
+    },
+    {
+      "id": "B05",
+      "intent": "loan_inquiry",
+      "turns": [
+        {"speaker": "customer", "text": "What are your current personal loan rates?"},
+        {"speaker": "agent", "text": "Our current personal loan rates start at 10.5% APR depending on credit profile."},
+        {"speaker": "customer", "text": "Great, thank you, that's helpful."}
+      ],
+      "resolved": true,
+      "escalated": false,
+      "escalation_reason": null
+    },
+    {
+      "id": "B06",
+      "intent": "card_activation",
+      "turns": [
+        {"speaker": "customer", "text": "I need to activate my new debit card."},
+        {"speaker": "agent", "text": "Happy to help! Can you confirm your date of birth for verification?"},
+        {"speaker": "customer", "text": "March 14th."},
+        {"speaker": "agent", "text": "Thank you, your card is now active."},
+        {"speaker": "customer", "text": "Awesome, appreciate the quick help!"}
+      ],
+      "resolved": true,
+      "escalated": false,
+      "escalation_reason": null
+    },
+    {
+      "id": "B07",
+      "intent": "account_closure",
+      "turns": [
+        {"speaker": "customer", "text": "I want to close my account, I'm switching banks."},
+        {"speaker": "agent", "text": "I'm sorry to see you go. Account closures need a branch visit or a signed form — I can email that form to you now."},
+        {"speaker": "customer", "text": "Fine, I guess, send it over."}
+      ],
+      "resolved": true,
+      "escalated": false,
+      "escalation_reason": null
+    },
+    {
+      "id": "B08",
+      "intent": "overdraft_fee",
+      "turns": [
+        {"speaker": "customer", "text": "Why was I charged an overdraft fee, this is ridiculous, I've been a customer for 10 years!"},
+        {"speaker": "agent", "text": "I understand the frustration — let me check your account history."},
+        {"speaker": "customer", "text": "This better be resolved, I'm this close to leaving the bank."},
+        {"speaker": "agent", "text": "I've reversed the $35 overdraft fee as a one-time courtesy."},
+        {"speaker": "customer", "text": "Okay, thank you, I appreciate that."}
+      ],
+      "resolved": true,
+      "escalated": false,
+      "escalation_reason": null
+    },
+    {
+      "id": "B09",
+      "intent": "international_transfer",
+      "turns": [
+        {"speaker": "customer", "text": "I need to send $5,000 to an account overseas urgently."},
+        {"speaker": "agent", "text": "I can help set that up. International transfers above $2,000 require additional verification through a specialist for security reasons."},
+        {"speaker": "customer", "text": "That's really inconvenient, I needed this done today."},
+        {"speaker": "agent", "text": "I understand the urgency — I've flagged this as priority and connected you with our transfers team."}
+      ],
+      "resolved": false,
+      "escalated": true,
+      "escalation_reason": "amount_above_agent_authority"
+    },
+    {
+      "id": "B10",
+      "intent": "balance_query",
+      "turns": [
+        {"speaker": "customer", "text": "Can you show me my last 5 transactions?"},
+        {"speaker": "agent", "text": "Here are your last 5 transactions: [list omitted]. Anything else?"},
+        {"speaker": "customer", "text": "No that's all, thanks."}
+      ],
+      "resolved": true,
+      "escalated": false,
+      "escalation_reason": null
+    },
+    {
+      "id": "B11",
+      "intent": "card_dispute",
+      "turns": [
+        {"speaker": "customer", "text": "Another unauthorized charge?! Nobody is helping me here, I've called three times this week!"},
+        {"speaker": "agent", "text": "I'm very sorry about the repeated issue. Let me look at the full history."},
+        {"speaker": "customer", "text": "I don't want to repeat myself again, just fix it."},
+        {"speaker": "agent", "text": "Understood — I can see the prior two disputes are still open. I'm escalating this as a priority case to a senior specialist who will call you within the hour."}
+      ],
+      "resolved": false,
+      "escalated": true,
+      "escalation_reason": "repeat_contact_unresolved"
+    },
+    {
+      "id": "B12",
+      "intent": "interest_rate_query",
+      "turns": [
+        {"speaker": "customer", "text": "What's the interest rate on my savings account?"},
+        {"speaker": "agent", "text": "Your savings account currently earns 3.2% APY."},
+        {"speaker": "customer", "text": "Perfect, thank you!"}
+      ],
+      "resolved": true,
+      "escalated": false,
+      "escalation_reason": null
+    },
+    {
+      "id": "B13",
+      "intent": "credit_limit_increase",
+      "turns": [
+        {"speaker": "customer", "text": "Thanks for the quick reply, I'd love a credit limit increase please."},
+        {"speaker": "agent", "text": "Let me check your eligibility now."},
+        {"speaker": "customer", "text": "Great, appreciate it."},
+        {"speaker": "agent", "text": "I'm sorry, based on your current profile you're not eligible for an increase at this time."},
+        {"speaker": "customer", "text": "That's unacceptable, this is ridiculous, I've never missed a payment!"}
+      ],
+      "resolved": false,
+      "escalated": true,
+      "escalation_reason": "denied_request_high_dissatisfaction"
+    }
+  ]
+}

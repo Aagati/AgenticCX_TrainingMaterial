@@ -1,0 +1,6 @@
+[
+  {"id": "POL-010", "title": "Auto Policy - Roadside Assistance", "text": "Roadside assistance covers towing up to 25 miles, battery jump-starts, and flat tire changes, limited to 3 uses per policy year."},
+  {"id": "POL-011", "title": "Home Policy - Water Damage", "text": "Water damage from sudden and accidental plumbing failures is covered. Gradual leaks or damage from lack of maintenance are excluded."},
+  {"id": "POL-012", "title": "Auto Policy - Rental Reimbursement", "text": "If your covered vehicle is in the shop after an approved claim, rental reimbursement covers up to $40/day for a maximum of 20 days."},
+  {"id": "POL-013", "title": "Claims - Appeal Window", "text": "A denied claim may be appealed in writing within 30 days of the denial letter date, with any new supporting documentation."}
+]

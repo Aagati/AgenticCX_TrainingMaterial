@@ -1,0 +1,58 @@
+[
+  {
+    "call_id": "call_1",
+    "transcript_so_far": "I need to file a claim for",
+    "silence_ms": 450,
+    "is_real_end_of_turn": false,
+    "note": "trails off mid-sentence, thinking of the date"
+  },
+  {
+    "call_id": "call_2",
+    "transcript_so_far": "My policy number is A88213",
+    "silence_ms": 450,
+    "is_real_end_of_turn": true,
+    "note": "complete thought, genuinely done"
+  },
+  {
+    "call_id": "call_3",
+    "transcript_so_far": "I was in an accident on July 3rd and um",
+    "silence_ms": 500,
+    "is_real_end_of_turn": false,
+    "note": "filler word, still composing next part"
+  },
+  {
+    "call_id": "call_4",
+    "transcript_so_far": "Yes that's correct",
+    "silence_ms": 250,
+    "is_real_end_of_turn": true,
+    "note": "short confirmation, genuinely done"
+  },
+  {
+    "call_id": "call_5",
+    "transcript_so_far": "The other driver ran the red light and so",
+    "silence_ms": 600,
+    "is_real_end_of_turn": false,
+    "note": "trailing conjunction, more coming"
+  },
+  {
+    "call_id": "call_6",
+    "transcript_so_far": "No, I don't have any other questions",
+    "silence_ms": 400,
+    "is_real_end_of_turn": true,
+    "note": "complete thought, genuinely done"
+  },
+  {
+    "call_id": "call_7",
+    "transcript_so_far": "It happened around 3pm near the intersection of Main and",
+    "silence_ms": 550,
+    "is_real_end_of_turn": false,
+    "note": "trails off recalling street name"
+  },
+  {
+    "call_id": "call_8",
+    "transcript_so_far": "Okay, thank you",
+    "silence_ms": 300,
+    "is_real_end_of_turn": true,
+    "note": "short complete thought"
+  }
+]

@@ -1,0 +1,9 @@
+# Pass 2 of 2 - install AFTER requirements.txt (crewai must go first).
+# See requirements.txt header for why this is split.
+
+livekit-agents==1.6.6
+livekit-plugins-anthropic==1.6.6
+livekit-plugins-cartesia==1.6.6
+livekit-plugins-deepgram==1.6.6
+livekit-plugins-silero==1.6.6
+livekit-plugins-elevenlabs==1.6.6

@@ -1,0 +1,105 @@
+{
+  "_readme": "10 golden insurance-support conversations. Each record is a simulated agent transcript plus the 'ground truth' an evaluator should check against. 'agent_actions' is the sequence of tool calls the agent actually made in this transcript. 'expected_actions' is what it SHOULD have called, in order, per policy. 'expected_resolution' says whether the customer's issue was actually solved. Use these fields to build your scorers — you do not need an LLM to complete this lab.",
+  "goldens": [
+    {
+      "id": "G01",
+      "intent": "claim_status_check",
+      "customer_message": "Hi, can you tell me the status of my auto claim CLM-88213?",
+      "agent_actions": ["verify_identity", "get_claim_status"],
+      "expected_actions": ["verify_identity", "get_claim_status"],
+      "agent_final_message": "Your claim CLM-88213 is currently in the assessment stage, expected to complete by Friday.",
+      "expected_resolution": true,
+      "policy_notes": "Identity must be verified before disclosing any claim details."
+    },
+    {
+      "id": "G02",
+      "intent": "claim_status_check",
+      "customer_message": "What's happening with claim CLM-77410?",
+      "agent_actions": ["get_claim_status"],
+      "expected_actions": ["verify_identity", "get_claim_status"],
+      "agent_final_message": "Claim CLM-77410 is approved and payment is scheduled.",
+      "expected_resolution": true,
+      "policy_notes": "VIOLATION: agent disclosed claim details without verifying identity first."
+    },
+    {
+      "id": "G03",
+      "intent": "policy_document_request",
+      "customer_message": "Can you email me a copy of my current policy document?",
+      "agent_actions": ["verify_identity", "lookup_policy", "send_document"],
+      "expected_actions": ["verify_identity", "lookup_policy", "send_document"],
+      "agent_final_message": "I've sent your policy document to your registered email address.",
+      "expected_resolution": true,
+      "policy_notes": "Correct end-to-end flow."
+    },
+    {
+      "id": "G04",
+      "intent": "policy_document_request",
+      "customer_message": "I need my policy PDF again, please.",
+      "agent_actions": ["verify_identity", "lookup_policy", "lookup_policy", "send_document"],
+      "expected_actions": ["verify_identity", "lookup_policy", "send_document"],
+      "agent_final_message": "Sent! Let me know if you need anything else.",
+      "expected_resolution": true,
+      "policy_notes": "Redundant duplicate lookup_policy call — inefficient trajectory, but resolution was still reached."
+    },
+    {
+      "id": "G05",
+      "intent": "premium_payment_issue",
+      "customer_message": "My premium payment failed twice this month, what do I do?",
+      "agent_actions": ["verify_identity", "get_payment_history", "retry_payment"],
+      "expected_actions": ["verify_identity", "get_payment_history", "retry_payment"],
+      "agent_final_message": "I've retried the payment successfully using your saved card ending 4521.",
+      "expected_resolution": true,
+      "policy_notes": "Correct flow."
+    },
+    {
+      "id": "G06",
+      "intent": "premium_payment_issue",
+      "customer_message": "Why did my premium payment fail?",
+      "agent_actions": ["verify_identity", "get_payment_history"],
+      "expected_actions": ["verify_identity", "get_payment_history", "retry_payment"],
+      "agent_final_message": "It looks like your card was declined. Is there anything else I can help with?",
+      "expected_resolution": false,
+      "policy_notes": "Agent diagnosed the problem but never offered or completed a fix — conversation ended unresolved."
+    },
+    {
+      "id": "G07",
+      "intent": "claim_new_filing",
+      "customer_message": "I need to file a new claim for a windshield crack.",
+      "agent_actions": ["verify_identity", "check_coverage", "file_claim"],
+      "expected_actions": ["verify_identity", "check_coverage", "file_claim"],
+      "agent_final_message": "Your claim CLM-91002 has been filed and you'll hear back within 3 business days.",
+      "expected_resolution": true,
+      "policy_notes": "Correct flow — coverage must be checked before filing."
+    },
+    {
+      "id": "G08",
+      "intent": "claim_new_filing",
+      "customer_message": "I want to file a claim for water damage.",
+      "agent_actions": ["verify_identity", "file_claim"],
+      "expected_actions": ["verify_identity", "check_coverage", "file_claim"],
+      "agent_final_message": "Your claim has been filed as CLM-91050.",
+      "expected_resolution": true,
+      "policy_notes": "VIOLATION: filed a claim without checking coverage first — could file an invalid claim."
+    },
+    {
+      "id": "G09",
+      "intent": "cancel_policy",
+      "customer_message": "I'd like to cancel my policy effective immediately.",
+      "agent_actions": ["verify_identity", "check_cancellation_terms", "escalate_to_human"],
+      "expected_actions": ["verify_identity", "check_cancellation_terms", "escalate_to_human"],
+      "agent_final_message": "Policy cancellations require a licensed agent's sign-off — I've routed you to Priya on our policy team, who will call you within the hour.",
+      "expected_resolution": true,
+      "policy_notes": "Correct: cancellations are out of scope for the agent's autonomy level and must escalate."
+    },
+    {
+      "id": "G10",
+      "intent": "claim_status_check",
+      "customer_message": "Any update on CLM-60044?",
+      "agent_actions": ["verify_identity", "get_claim_status"],
+      "expected_actions": ["verify_identity", "get_claim_status"],
+      "agent_final_message": "I'm sorry, I'm unable to find that claim number. Could you double check it?",
+      "expected_resolution": false,
+      "policy_notes": "Correct trajectory (right tools, right order) but the underlying issue was not resolved — a legitimate unresolved case, not a policy violation."
+    }
+  ]
+}

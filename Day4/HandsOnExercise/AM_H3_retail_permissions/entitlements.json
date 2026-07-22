@@ -1,0 +1,12 @@
+{
+  "user_101": {
+    "owns_orders": ["ORD-500", "ORD-501"],
+    "can_modify_quantity": true,
+    "can_cancel": true
+  },
+  "user_202": {
+    "owns_orders": ["ORD-600"],
+    "can_modify_quantity": false,
+    "can_cancel": true
+  }
+}

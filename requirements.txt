@@ -1,0 +1,48 @@
+# Pass 1 of 2. See install.ps1 / install.sh for the full install.
+#
+# livekit-agents (requirements-voice.txt) pins json-repair==0.60.1, which
+# conflicts with crewai's json-repair~=0.25.2 pin if resolved in one pip
+# invocation. Installing crewai here first, then livekit-agents separately
+# (requirements-voice.txt), avoids the resolver conflict: crewai gets its
+# preferred json-repair 0.25.x, then livekit-agents silently upgrades it to
+# 0.60.1. crewai works fine against the newer version in practice.
+# DO NOT `pip install -r requirements.txt -r requirements-voice.txt` in one
+# command — same conflict returns. Always install this file first, verified.
+
+# Core Claude SDK / MCP
+claude-agent-sdk==0.2.123
+anthropic==0.117.0
+mcp==1.28.1
+
+# LangChain / LangGraph (Day 1-2)
+langchain==1.3.14
+langchain-anthropic==1.4.8
+langchain-core==1.4.9
+langgraph==1.2.9
+
+# CrewAI (Day 2)
+crewai==1.15.4
+
+# Other model SDKs (Day 1 appendix - OpenAI / Gemini)
+openai==2.46.0
+google-genai==2.13.0
+
+# Voice pipeline (Day 3) - non-livekit parts
+pipecat-ai==1.5.0
+numpy==2.4.6
+jiwer==4.0.0
+livekit==1.1.13
+
+# Eval & observability (Day 5 appendix)
+langfuse==4.14.1
+
+# Raw vendor SDKs (HandsOnExercise real-provider variants: Day1 solution_openai.py,
+# Day3 solution_real_voice.py, Day4 solution_real_mcp.py, Day5 eval_suite_langfuse.py)
+deepgram-sdk==7.5.0
+elevenlabs==2.59.0
+
+# Shared
+pydantic==2.12.5
+
+# Notebook execution
+ipykernel==7.3.0
