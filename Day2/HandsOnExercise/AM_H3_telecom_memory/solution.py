@@ -5,11 +5,24 @@ AM · H3 — Telecom Cross-Session Memory (REFERENCE SOLUTION)
 import json
 import os
 from anthropic import Anthropic
+from dotenv import load_dotenv
+
+
+load_dotenv()
 
 client = Anthropic()
 MODEL = "claude-sonnet-5"
 
-STORE_PATH = "memory_store.json"
+STORE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "memory_store.json")
+
+
+def _text(response) -> str:
+    """First text block's content — response.content[0] may be a
+    ThinkingBlock (no .text) when the model reasons before replying."""
+    for block in response.content:
+        if block.type == "text":
+            return block.text
+    return ""
 
 
 def _load_store() -> dict:
@@ -48,7 +61,9 @@ def extract_facts(message: str) -> dict:
         ),
         messages=[{"role": "user", "content": message}],
     )
-    text = response.content[0].text.strip()
+    text = _text(response).strip()
+    if text.startswith("```"):
+        text = text.strip("`").removeprefix("json").strip()
     try:
         return json.loads(text)
     except json.JSONDecodeError:
@@ -71,7 +86,7 @@ def chat(customer_id: str, message: str) -> str:
         model=MODEL, max_tokens=250, system=system,
         messages=[{"role": "user", "content": message}],
     )
-    reply = response.content[0].text
+    reply = _text(response)
 
     new_facts = extract_facts(message)
     for k, v in new_facts.items():
@@ -86,15 +101,21 @@ if __name__ == "__main__":
 
     cid = "cust_8842"
 
-    print("=== SESSION 1 ===")
+    print("=== SESSION 1 (customer states device + plan) ===")
     msg1 = "Hi, my data has been really slow today. I'm on an iPhone 15, Unlimited Plus plan."
     print("CUSTOMER:", msg1)
     print("AGENT:", chat(cid, msg1))
-    print("\n[memory_store.json now contains]:", load_profile(cid))
 
-    print("\n=== SESSION 2 (next day, new conversation) ===")
-    msg2 = "Hey, I have a question about my bill."
+    profile = load_profile(cid)
+    print(f"\n[{STORE_PATH} now contains]:", profile)
+
+    print("\n=== SESSION 2 (next day, new conversation — customer does NOT restate device/plan) ===")
+    msg2 = "Hey, is my phone covered under device protection, and does my plan include international roaming?"
     print("CUSTOMER:", msg2)
-    print("AGENT:", chat(cid, msg2))
-    print("\n(Check: the agent's system prompt for session 2 already included "
-          "device + plan from session 1 — the customer never had to restate them.)")
+    reply2 = chat(cid, msg2)
+    print("AGENT:", reply2)
+
+    print("\n=== RECALL CHECK ===")
+    for key, value in profile.items():
+        hit = value.lower() in reply2.lower()
+        print(f"  {'PASS' if hit else 'FAIL'} — {key}={value!r} {'found' if hit else 'missing'} in session-2 reply")
