@@ -7,11 +7,15 @@ from typing import Optional
 from datetime import datetime
 from pydantic import BaseModel, Field
 from anthropic import Anthropic
+from dotenv import load_dotenv
+
+
+load_dotenv() #Load environment variables
 
 client = Anthropic()
 MODEL = "claude-sonnet-5"
 
-with open("mock_transactions.json") as f:
+with open("Day2\\HandsOnExercise\\AM_H1_banking_slotfilling\\mock_transactions.json") as f:
     TRANSACTIONS = json.load(f)
 
 REQUIRED_SLOTS = ["account_last4", "transaction_date", "amount", "reason"]

@@ -9,33 +9,31 @@ kickoff() calls, so a second "session" (a second kickoff in the same
 process, or even a fresh process run) recalls facts from the first.
 
 Setup:
-    pip install crewai
+    pip install crewai sentence-transformers
     Uses ANTHROPIC_API_KEY (already in .env) for the chat model, via
     LiteLLM's "anthropic/<model>" string.
-    CrewAI's long-term memory layer embeds facts for recall and defaults to
-    OpenAI embeddings — set OPENAI_API_KEY in .env (same placeholder added
-    for the Day1 GPT variant) or this will raise on first kickoff.
+    CrewAI's long-term memory layer embeds facts for recall. Anthropic has
+    no embeddings API, so this uses a local sentence-transformers embedder
+    (all-MiniLM-L6-v2, CPU, no API key) instead of CrewAI's OpenAI default —
+    keeps the whole exercise on just the Anthropic key.
 
 Note: CrewAI's memory store lives in a local directory (~/.crewai or
 CREWAI_STORAGE_DIR) — delete it if you want a clean-slate re-run, the same
 role solution.py's os.remove(STORE_PATH) plays.
 """
 
-import os
 import sys
 from crewai import Agent, Crew, Task
 
 if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-if not os.environ.get("OPENAI_API_KEY"):
-    raise RuntimeError(
-        "OPENAI_API_KEY not set. CrewAI's long-term memory layer embeds "
-        "facts with OpenAI embeddings by default - add a key to .env "
-        "(same placeholder used for the Day1 GPT variant)."
-    )
-
 MODEL = "anthropic/claude-sonnet-5"
+
+EMBEDDER = {
+    "provider": "sentence-transformer",
+    "config": {"model_name": "all-MiniLM-L6-v2"},
+}
 
 support_agent = Agent(
     role="Telecom Support Agent",
@@ -50,7 +48,13 @@ support_agent = Agent(
     verbose=False,
 )
 
-crew = Crew(agents=[support_agent], tasks=[], memory=True, verbose=False)
+crew = Crew(
+    agents=[support_agent],
+    tasks=[],
+    memory=True,
+    embedder=EMBEDDER,
+    verbose=False,
+)
 
 
 def chat(customer_id: str, message: str) -> str:
