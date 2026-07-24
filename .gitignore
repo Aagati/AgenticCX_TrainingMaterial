@@ -9,6 +9,7 @@ env/
 ENV/
 env.bak/
 venv.bak/
+.venv-wsl/
 
 # Python
 __pycache__/
