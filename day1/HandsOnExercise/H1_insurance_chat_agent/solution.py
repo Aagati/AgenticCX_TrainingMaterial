@@ -7,11 +7,14 @@ import re
 from typing import List
 from pydantic import BaseModel, Field, ValidationError
 from anthropic import Anthropic
+from dotenv import load_dotenv
+
+load_dotenv()
 
 client = Anthropic()
 MODEL = "claude-sonnet-5"
 
-with open("knowledge_base.json") as f:
+with open("day1\\HandsOnExercise\\H1_insurance_chat_agent\\knowledge_base.json") as f:
     KB = json.load(f)
 
 STOPWORDS = {"the", "is", "a", "an", "of", "to", "for", "my", "does", "do",

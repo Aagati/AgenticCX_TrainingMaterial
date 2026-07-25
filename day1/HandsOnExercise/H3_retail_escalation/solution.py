@@ -13,6 +13,9 @@ if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 from pydantic import BaseModel, Field, ValidationError, field_validator
 from anthropic import Anthropic
+from dotenv import load_dotenv
+
+load_dotenv()  #load environment variables
 
 client = Anthropic()
 MODEL = "claude-sonnet-5"

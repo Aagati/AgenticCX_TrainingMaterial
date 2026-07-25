@@ -37,6 +37,8 @@ BLOCK_CARD_TOOL = {
 #    given clear, explicit confirmation earlier in the conversation
 #  - tells it to ask a clarifying/confirmation question first if it hasn't
 #    been given one yet
+#  - tells it a vague/hesitant reply ("maybe", "I think so") does NOT count
+#    as confirmation -- it should ask again rather than guess
 SYSTEM_PROMPT = None  # TODO
 
 
@@ -66,10 +68,22 @@ def run_turn(messages: list) -> list:
 
 
 if __name__ == "__main__":
-    convo = [{"role": "user", "content": "Hi, my card was stolen, please block it right now."}]
+    customer_msg_1 = "Hi, my card was stolen, please block it right now."
+    print("CUSTOMER:", customer_msg_1)
+    convo = [{"role": "user", "content": customer_msg_1}]
     convo = run_turn(convo)
     print("AGENT:", convo[-1]["content"])
 
-    convo.append({"role": "user", "content": "Yes, it's the one ending 4471, please block it."})
+    # This reply is deliberately NOT a clear confirmation -- watch whether your
+    # system prompt makes the agent ask again instead of calling block_card here.
+    customer_msg_2 = "Umm... I think so? I'm not totally sure it's the right move."
+    print("\nCUSTOMER:", customer_msg_2)
+    convo.append({"role": "user", "content": customer_msg_2})
+    convo = run_turn(convo)
+    print("AGENT:", convo[-1]["content"])
+
+    customer_msg_3 = "Yes, I'm sure. It's the one ending 4471, please block it."
+    print("\nCUSTOMER:", customer_msg_3)
+    convo.append({"role": "user", "content": customer_msg_3})
     convo = run_turn(convo)
     print("AGENT:", convo[-1]["content"])

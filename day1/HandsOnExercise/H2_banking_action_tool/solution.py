@@ -5,6 +5,9 @@ H2 — Banking Action Tool with Confirmation Step (REFERENCE SOLUTION)
 from typing import Optional
 from pydantic import BaseModel, Field, ValidationError
 from anthropic import Anthropic
+from dotenv import load_dotenv
+
+load_dotenv()
 
 client = Anthropic()
 MODEL = "claude-sonnet-5"
@@ -42,10 +45,13 @@ Rules:
 2. Only call block_card after the customer has given clear, explicit
    confirmation ("yes", "please block it", "go ahead", etc.) in a message
    that came AFTER your confirmation question.
-3. After the tool executes, tell the customer it's done, give them the
+3. If the customer's reply is vague, hesitant, or uncertain ("maybe", "I
+   think so", "not sure", etc.), that is NOT confirmation — ask them to
+   confirm clearly before proceeding, don't guess at their intent.
+4. After the tool executes, tell the customer it's done, give them the
    confirmation number, and mention a replacement card typically arrives in
    5-7 business days.
-4. Be concise and reassuring — the customer is likely stressed about fraud."""
+5. Be concise and reassuring — the customer is likely stressed about fraud."""
 
 
 def block_card(card_last4: str, reason: str) -> dict:
@@ -99,12 +105,24 @@ def run_turn(messages: list) -> list:
 
 
 if __name__ == "__main__":
-    convo = [{"role": "user", "content": "Hi, my card was stolen, please block it right now."}]
+    customer_msg_1 = "Hi, my card was stolen, please block it right now."
+    print("CUSTOMER:", customer_msg_1)
+    convo = [{"role": "user", "content": customer_msg_1}]
     convo = run_turn(convo)
     print("AGENT:", convo[-1]["content"])
     # Expected: agent asks which card / for confirmation, does NOT call the tool yet.
 
-    convo.append({"role": "user", "content": "Yes, it's the one ending 4471, please block it."})
+    customer_msg_2 = "Umm... I think so? I'm not totally sure it's the right move."
+    print("\nCUSTOMER:", customer_msg_2)
+    convo.append({"role": "user", "content": customer_msg_2})
+    convo = run_turn(convo)
+    print("AGENT:", convo[-1]["content"])
+    # Expected: this is NOT clear confirmation -- the agent should ask again,
+    # not call block_card. If [SYSTEM] Blocking... prints here, the guardrail failed.
+
+    customer_msg_3 = "Yes, I'm sure. It's the one ending 4471, please block it."
+    print("\nCUSTOMER:", customer_msg_3)
+    convo.append({"role": "user", "content": customer_msg_3})
     convo = run_turn(convo)
     print("AGENT:", convo[-1]["content"])
     # Expected: [SYSTEM] Blocking card ending 4471... printed, then agent
