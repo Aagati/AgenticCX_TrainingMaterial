@@ -24,6 +24,7 @@ REFUND_AUTHORITY_LIMIT = 1500
 
 ORDERS = {
     "ORD-4021": {"status": "billed", "delivered": False, "amount": 2400, "item": "Wireless Headphones"},
+    "ORD-3015": {"status": "billed", "delivered": False, "amount": 900, "item": "Bluetooth Speaker"},
 }
 
 GET_ORDER_STATUS_TOOL = {
@@ -150,13 +151,13 @@ def run_conversation(messages: list, max_iterations: int = 5) -> list:
 
 
 if __name__ == "__main__":
-    convo = [{
-        "role": "user",
-        "content": (
-            "My order ORD-4021 was never delivered but I was charged 2400 "
-            "rupees. This is ridiculous, I want a full refund right now."
-        ),
-    }]
+    print("=== Conversation 1: refund ABOVE authority limit -- should escalate ===")
+    customer_msg_1 = (
+        "My order ORD-4021 was never delivered but I was charged 2400 "
+        "rupees. This is ridiculous, I want a full refund right now."
+    )
+    print("CUSTOMER:", customer_msg_1)
+    convo = [{"role": "user", "content": customer_msg_1}]
     convo = run_conversation(convo)
     print("AGENT:", convo[-1]["content"])
     # Expected flow:
@@ -164,5 +165,23 @@ if __name__ == "__main__":
     #  2. 2400 > REFUND_AUTHORITY_LIMIT (1500) -> model calls escalate_to_human
     #     with a real summary, sentiment "frustrated", order_id, requested
     #     action "full refund of 2400 INR", and full transcript.
-    #  3. EscalationPayload validates cleanly (no placeholders) -> ticket printed.
+    #  3. EscalationPayload validates cleanly (no placeholders) -> the
+    #     "=== ESCALATION TICKET CREATED ===" block above prints.
     #  4. Final assistant text reassures the customer a specialist has context.
+
+    print("\n=== Conversation 2: refund WITHIN authority limit -- should NOT escalate ===")
+    customer_msg_2 = (
+        "My order ORD-3015 never showed up either and I was charged 900 "
+        "rupees. Can I get a refund?"
+    )
+    print("CUSTOMER:", customer_msg_2)
+    convo2 = [{"role": "user", "content": customer_msg_2}]
+    convo2 = run_conversation(convo2)
+    print("AGENT:", convo2[-1]["content"])
+    # Expected flow:
+    #  1. Model calls get_order_status("ORD-3015") -> sees delivered=False, amount=900
+    #  2. 900 <= REFUND_AUTHORITY_LIMIT (1500) -> within the model's own
+    #     authority, so it resolves this directly in text -- no
+    #     escalate_to_human call, no ticket block should print above.
+    #  3. If a ticket DOES print here, the model is over-escalating something
+    #     it was authorized to handle -- worth flagging in discussion.
