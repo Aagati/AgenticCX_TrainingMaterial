@@ -43,11 +43,25 @@ SUBMIT_ANSWER_TOOL = {
 }
 
 
+def _tokenize(text: str):
+    """Given to you — lowercase, keep alphabetic words, drop stopwords and
+    very short tokens. Retrieval quality isn't the point of this exercise,
+    so don't spend time here."""
+    words = re.findall(r"[a-z]+", text.lower())
+    return [w for w in words if w not in STOPWORDS and len(w) > 2]
+
+
 def retrieve(question: str, top_k: int = 2):
     """
-    TODO 2: Return the top_k documents from KB most relevant to `question`
-    (same keyword-overlap approach as before — tokenize, score by overlap,
-    sort, return non-zero matches). Return a list of dicts.
+    TODO 2: Return the top_k documents from KB most relevant to `question`,
+    using keyword overlap:
+      1. token-set for the question via _tokenize().
+      2. token-set for each doc via _tokenize(doc["title"] + " " + doc["text"]).
+      3. score = size of the set intersection.
+      4. sort by score descending, take top_k, and keep only score > 0
+         (zero overlap must return [] — that's what triggers the
+         "I don't have this information" path later).
+    Return a list of dicts (the KB doc objects themselves).
     """
     raise NotImplementedError
 

@@ -31,7 +31,9 @@ Build a single-turn chat agent that:
 ## Files
 - `knowledge_base.json` — 6 sample policy clauses across motor and health.
 - `starter.py` — scaffold with TODOs. Run it, it will error/stub until you
-  fill in the three TODOs.
+  fill in the TODOs. The `_tokenize()` helper is given to you — retrieval
+  quality isn't what this exercise grades, grounding and citation validation
+  are.
 - `solution.py` — reference solution (don't peek until you've had a real go,
   or you're stuck for >15 min).
 
