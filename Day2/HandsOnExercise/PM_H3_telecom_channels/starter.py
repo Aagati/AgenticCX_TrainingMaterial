@@ -22,20 +22,30 @@ structure on the way in (adapters), tone and sign-off on the way out
 (formatters). Adding SMS should then be one adapter, one formatter, and zero
 changes to handle_message().
 
-Run it from this directory: `python starter.py`
+Run: `python starter.py` — paths resolve relative to this file, so any
+working directory is fine.
 """
 
 import json
 import os
+import sys
 from anthropic import Anthropic
 from dotenv import load_dotenv
 
 load_dotenv()  # reads ANTHROPIC_API_KEY from the repo-root .env
 
+# Windows consoles default to cp1252 and crash when the model emits an arrow,
+# em-dash or curly quote. Force UTF-8 so a print() cannot kill the lab.
+if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
 client = Anthropic()
 MODEL = "claude-sonnet-5"
 
-STORE_PATH = "memory_store.json"
+# Keep the store next to THIS file, not in whatever directory you happened
+# to launch from — otherwise "delete it for a clean slate" hits the wrong
+# file and the memory demo looks broken.
+STORE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "memory_store.json")
 
 
 def _text(response) -> str:

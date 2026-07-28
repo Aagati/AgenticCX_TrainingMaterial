@@ -26,10 +26,16 @@ Reading order:
 import json
 import os
 import re
+import sys
 from anthropic import Anthropic
 from dotenv import load_dotenv
 
 load_dotenv()
+
+# Windows consoles default to cp1252 and crash when the model emits an arrow,
+# em-dash or curly quote. Force UTF-8 so a print() cannot kill the lab.
+if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 client = Anthropic()
 MODEL = "claude-sonnet-5"

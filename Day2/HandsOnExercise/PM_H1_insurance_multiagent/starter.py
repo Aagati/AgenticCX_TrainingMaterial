@@ -21,22 +21,33 @@ described in TODO 1 gets fixed in one place instead of three.
 
 Part 2 then reuses all of it unchanged and only alters the last step.
 
-Run it from this directory: `python starter.py`
+Run: `python starter.py` — paths resolve relative to this file, so any
+working directory is fine.
 """
 
 import json
+import os
 import re
+import sys
 from anthropic import Anthropic
 from dotenv import load_dotenv
 
 load_dotenv()  # reads ANTHROPIC_API_KEY from the repo-root .env
 
+# Windows consoles default to cp1252 and crash when the model emits an arrow,
+# em-dash or curly quote. Force UTF-8 so a print() cannot kill the lab.
+if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
 client = Anthropic()
 MODEL = "claude-sonnet-5"
 
-with open("claims_data.json") as f:
+# Resolve data next to THIS file, so the lab runs from any working directory.
+DATA_DIR = os.path.dirname(os.path.abspath(__file__))
+
+with open(os.path.join(DATA_DIR, "claims_data.json")) as f:
     CLAIMS = json.load(f)
-with open("policy_clauses.json") as f:
+with open(os.path.join(DATA_DIR, "policy_clauses.json")) as f:
     POLICY_CLAUSES = json.load(f)
 
 

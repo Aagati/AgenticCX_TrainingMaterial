@@ -13,19 +13,30 @@ the policy clauses, and vice versa. Keeping the data apart is what stops a
 specialist from improvising outside its lane. An instruction it might ignore
 is a much weaker guarantee than context it simply doesn't have.
 
-Run it from this directory: `python starter.py`
+Run: `python starter.py` — paths resolve relative to this file, so any
+working directory is fine.
 """
 
 import json
+import os
+import sys
 from anthropic import Anthropic
 from dotenv import load_dotenv
 
 load_dotenv()  # reads ANTHROPIC_API_KEY from the repo-root .env
 
+# Windows consoles default to cp1252 and crash when the model emits an arrow,
+# em-dash or curly quote. Force UTF-8 so a print() cannot kill the lab.
+if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
 client = Anthropic()
 MODEL = "claude-sonnet-5"
 
-with open("mock_data.json") as f:
+# Resolve data next to THIS file, so the lab runs from any working directory.
+DATA_DIR = os.path.dirname(os.path.abspath(__file__))
+
+with open(os.path.join(DATA_DIR, "mock_data.json")) as f:
     DATA = json.load(f)
 
 
