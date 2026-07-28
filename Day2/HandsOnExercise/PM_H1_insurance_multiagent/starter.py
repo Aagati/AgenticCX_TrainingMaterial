@@ -1,10 +1,35 @@
 """
 PM · H1 — Insurance Supervisor + 2 Specialist Agents (STARTER)
+
+This is AM · H2 with the routing upgraded twice over.
+
+This morning the supervisor was a classifier: one word out, an if/else picked
+a specialist, done. Here the supervisor is an AGENT that decides for itself
+whether a specialist is needed at all — "Hi there!" should get answered
+directly, not routed. And the specialists are no longer given all the data up
+front; each has a TOOL and fetches what it needs.
+
+That means three independent tool-use loops (claims, policy, supervisor), and
+the supervisor's "tool" is an entire sub-agent. The specialist's reply comes
+back as a tool_result like any other, which is the whole trick: to the
+supervisor, delegating to another agent looks exactly like calling a function.
+
+You will write nearly the same loop three times. That is the signal to write
+it ONCE as a helper and pass in the tools and handlers — see solution.py's
+run_agent_loop(). Doing it that way also means the parallel-tool_use bug
+described in TODO 1 gets fixed in one place instead of three.
+
+Part 2 then reuses all of it unchanged and only alters the last step.
+
+Run it from this directory: `python starter.py`
 """
 
 import json
 import re
 from anthropic import Anthropic
+from dotenv import load_dotenv
+
+load_dotenv()  # reads ANTHROPIC_API_KEY from the repo-root .env
 
 client = Anthropic()
 MODEL = "claude-sonnet-5"
@@ -46,6 +71,11 @@ def run_claims_specialist(customer_message: str) -> str:
       - if it doesn't call a tool (e.g. it needs to ask which claim id),
         just return its text reply
     Return the specialist's final text reply (a string).
+
+    Heads-up: one assistant turn can contain MORE THAN ONE tool_use block
+    (parallel tool use), and the API requires a matching tool_result for
+    every single one in the next user message. Handling only the first
+    tool_use block is a 400. Loop over all of them.
     """
     raise NotImplementedError
 
@@ -81,6 +111,11 @@ def run_policy_specialist(customer_message: str) -> str:
       - call the model with tools=[SEARCH_POLICY_TOOL], execute the tool
         when called, feed results back, get final text reply
     Return the specialist's final text reply (a string).
+
+    Same heads-up as TODO 1: this agent in particular tends to fire two
+    search_policy calls at once. Every tool_use block needs its own
+    tool_result. Factoring TODO 1 and TODO 3 into one shared loop helper is
+    the cleaner move.
     """
     raise NotImplementedError
 
@@ -122,6 +157,16 @@ def run_supervisor(customer_message: str) -> str:
         customer in a consistent voice
       - if no handoff is called, just return the supervisor's direct reply
     Return the supervisor's final text reply.
+
+    The interesting case is the one with NO tool call. "Hi there!" must be
+    answered directly — an agent that routes a greeting to the claims
+    specialist is worse than the morning's classifier, which at least was
+    fast. Say so explicitly in the system prompt; left to itself, a model
+    holding a shiny tool will reach for it.
+
+    Beware `next(b.text for b in response.content if b.type == "text")` — a
+    bare next() with no default raises StopIteration when the turn contains
+    only thinking and tool_use blocks. Collect the text blocks instead.
     """
     raise NotImplementedError
 
@@ -140,6 +185,18 @@ if __name__ == "__main__":
 # ============================================================
 # Part 2 — Agent-Assist Mode (required)
 # ============================================================
+#
+# Same routing, same specialists, same research. ONE thing changes: the final
+# reply is returned as a reviewable payload instead of being sent.
+#
+# The point is how little has to change. If autonomy level is a property of
+# the last step rather than of the architecture, you can ship a new flow in
+# assist mode, watch humans approve or edit the drafts for a few weeks, and
+# flip it to autonomous once the edit rate is low — without a rewrite. Systems
+# that hardcode "send" throughout can't make that move.
+#
+# requires_human_approval defaults to True and is never computed. A field that
+# can only ever be True is a contract, not a variable.
 from typing import Optional
 from pydantic import BaseModel, Field
 

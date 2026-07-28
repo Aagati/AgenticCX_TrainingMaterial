@@ -1,16 +1,52 @@
 """
 PM · H2 — Banking Episodic + Semantic Memory (STARTER)
+
+This morning's AM · H3 stored facts about WHO the customer is. That store
+cannot answer session 2's question here — "any update on that dispute I
+filed?" contains nothing durable to extract, so a profile store has nothing
+to retrieve. What's missing is a record of what HAPPENED.
+
+So: two stores, because they behave differently.
+
+  SEMANTIC ("prefers to be called Priya")  — a dict. Overwrite on change,
+      keep forever, load ALL of it every turn.
+  EPISODIC ("2026-07-28: disputed a $45 charge") — a list. Append-only,
+      never edited, load only the recent TAIL.
+
+That last difference is the whole reason they're separate. Facts must all be
+present or the agent re-asks something it was told. Episodes grow without
+limit, so they must be selected. One store would force one retrieval policy
+onto both, and it would be wrong for one of them.
+
+Run it from this directory: `python starter.py`
 """
 
 import json
 import os
 from datetime import date
 from anthropic import Anthropic
+from dotenv import load_dotenv
+
+load_dotenv()  # reads ANTHROPIC_API_KEY from the repo-root .env
 
 client = Anthropic()
 MODEL = "claude-sonnet-5"
 
 STORE_PATH = "memory_store.json"
+
+
+def _text(response) -> str:
+    """Provided — use this instead of response.content[0].text in TODO 5.
+
+    content[0] is often a ThinkingBlock (the model reasoning before it
+    answers), and ThinkingBlock has no .text attribute. The shortcut dies with
+    a confusing AttributeError — and only on some turns, so it passes while
+    you're testing and fails later. Always search by block type.
+    """
+    for block in response.content:
+        if block.type == "text":
+            return block.text
+    return ""
 
 
 def _load_store() -> dict:
@@ -30,7 +66,12 @@ def _get_customer(store: dict, customer_id: str) -> dict:
 
 
 def save_semantic_fact(customer_id: str, key: str, value: str):
-    """TODO 1: Set semantic[key] = value for this customer and persist."""
+    """TODO 1: Set semantic[key] = value for this customer and persist.
+
+    Assignment, not append — the newest value REPLACES the old one. A customer
+    who changes their phone number has one phone number, and keeping both
+    means the agent reads out both.
+    """
     raise NotImplementedError
 
 
@@ -48,7 +89,14 @@ def add_episode(customer_id: str, summary: str):
 
 
 def load_recent_episodes(customer_id: str, n: int = 3) -> list:
-    """TODO 4: Return the last n episodes for this customer (most recent last)."""
+    """TODO 4: Return the last n episodes for this customer (most recent last).
+
+    The cap is the point, not a detail. A five-year customer has hundreds of
+    episodes; injecting them all blows the context window, costs a fortune per
+    turn, and buries the relevant one in noise. Recency is the crudest useful
+    relevance heuristic — production ranks by similarity to the current
+    message instead. Either way: SELECT, don't dump.
+    """
     raise NotImplementedError
 
 
@@ -64,10 +112,17 @@ def extract_semantic_facts(message: str) -> dict:
         ),
         messages=[{"role": "user", "content": message}],
     )
+    # "Reply with ONLY valid JSON, no markdown fences" is an instruction, not
+    # a guarantee — the model wraps its answer in ```json fences often enough
+    # that skipping this step makes extraction return {} on most turns and
+    # semantic memory silently stays empty. Strip fences, THEN parse.
+    text = _text(response).strip()
+    if text.startswith("```"):
+        text = text.strip("`").removeprefix("json").strip()
     try:
-        return json.loads(response.content[0].text.strip())
+        return json.loads(text)
     except json.JSONDecodeError:
-        return {}
+        return {}  # learned nothing this turn — never crash the conversation
 
 
 def summarize_episode(customer_message: str, agent_reply: str) -> str:
@@ -77,7 +132,7 @@ def summarize_episode(customer_message: str, agent_reply: str) -> str:
         system="Summarize this customer service exchange in ONE short sentence, third person.",
         messages=[{"role": "user", "content": f"Customer: {customer_message}\nAgent: {agent_reply}"}],
     )
-    return response.content[0].text.strip()
+    return _text(response).strip()
 
 
 def chat(customer_id: str, message: str) -> str:
@@ -90,6 +145,19 @@ def chat(customer_id: str, message: str) -> str:
       4. Extract + save new semantic facts from `message`.
       5. Summarize this exchange and add_episode() it.
       6. Return the reply.
+
+    Keep the two sections LABELED and separate in the system prompt. The model
+    needs to know that "prefers Priya" is currently true while "disputed a
+    charge on the 10th" is something that happened; flattened together, a
+    stale event starts reading as a present fact. Include the dates for the
+    same reason.
+
+    Give them different instructions too. Facts: never re-ask. History:
+    reference "when relevant" — an agent that recites your history back at you
+    every turn is unsettling, not helpful.
+
+    Steps 4 and 5 come AFTER the reply, on purpose: they're for the next
+    session, and the model already had this message in full.
     """
     raise NotImplementedError
 

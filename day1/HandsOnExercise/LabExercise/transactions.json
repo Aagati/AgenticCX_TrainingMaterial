@@ -1,0 +1,39 @@
+{
+  "TXN-9001": {
+    "merchant": "QuickMart Online",
+    "amount": 1250,
+    "currency": "INR",
+    "card_last4": "4471",
+    "status": "posted",
+    "statement_date": "2026-07-02",
+    "under_dispute": false
+  },
+  "TXN-9002": {
+    "merchant": "Global Travel Booking",
+    "amount": 18400,
+    "currency": "INR",
+    "card_last4": "4471",
+    "status": "posted",
+    "statement_date": "2026-07-02",
+    "under_dispute": false
+  },
+  "TXN-9003": {
+    "merchant": "StreamPlus Subscription",
+    "amount": 640,
+    "currency": "INR",
+    "card_last4": "8830",
+    "status": "posted",
+    "statement_date": "2026-06-04",
+    "under_dispute": true,
+    "existing_case_ref": "CASE-30188"
+  },
+  "TXN-9004": {
+    "merchant": "CityFuel Station",
+    "amount": 2100,
+    "currency": "INR",
+    "card_last4": "4471",
+    "status": "pending",
+    "statement_date": null,
+    "under_dispute": false
+  }
+}

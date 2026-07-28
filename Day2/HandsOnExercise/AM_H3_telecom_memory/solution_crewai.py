@@ -24,17 +24,27 @@ role solution.py's os.remove(STORE_PATH) plays.
 
 import sys
 from crewai import Agent, Crew, Task
+from dotenv import load_dotenv
+
+load_dotenv()  # LiteLLM reads ANTHROPIC_API_KEY from the environment
 
 if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 MODEL = "anthropic/claude-sonnet-5"
 
+# Long-term memory recalls facts by SEMANTIC similarity, not exact key lookup
+# the way solution.py's dict does — so it needs an embedding model. Anthropic
+# ships no embeddings API, hence a local sentence-transformers model. First
+# run downloads ~90MB; after that it's CPU-only and offline.
 EMBEDDER = {
     "provider": "sentence-transformer",
     "config": {"model_name": "all-MiniLM-L6-v2"},
 }
 
+# role/goal/backstory are CrewAI's structured stand-in for a system prompt.
+# Same content solution.py writes as one prose string — just decomposed into
+# named slots the framework assembles for you.
 support_agent = Agent(
     role="Telecom Support Agent",
     goal="Resolve the customer's request while remembering durable facts "
@@ -48,6 +58,14 @@ support_agent = Agent(
     verbose=False,
 )
 
+# memory=True on the Crew is the whole lab. This single flag replaces
+# solution.py's extract_facts() + save_fact() + load_profile() + the JSON
+# store — CrewAI does extraction, persistence, and retrieval internally.
+#
+# The trade-off worth discussing: you no longer control WHAT gets stored.
+# solution.py's extract_facts() prompt is where you draw the line between
+# durable ("Pixel 9a") and session-specific ("data is slow today"). Here that
+# judgment is the framework's, and the store is opaque until you go read it.
 crew = Crew(
     agents=[support_agent],
     tasks=[],
@@ -70,9 +88,12 @@ def chat(customer_id: str, message: str) -> str:
         expected_output="A short, natural support reply to the customer.",
         agent=support_agent,
     )
+    # A fresh Task per message, swapped onto the existing crew. The crew (and
+    # its memory) is long-lived; the task is the single turn. Rebuilding the
+    # Crew here instead would work, but re-reads the store every call.
     crew.tasks = [task]
     result = crew.kickoff()
-    return str(result)
+    return str(result)  # kickoff returns a CrewOutput, not a str
 
 
 if __name__ == "__main__":

@@ -1,16 +1,64 @@
 """
 PM · H2 — Banking Episodic + Semantic Memory (REFERENCE SOLUTION)
+
+THE PATTERN: two kinds of memory, because they behave differently.
+
+  SEMANTIC — timeless facts about WHO the customer is.
+             "prefers to be called Priya." Overwrite on change, keep forever,
+             load all of it every turn. A dict.
+
+  EPISODIC — dated events, WHAT happened.
+             "2026-07-28: disputed a $45 charge." Append-only, never edited,
+             load only the recent tail. A list.
+
+AM · H3 had only the semantic half, and it couldn't answer "any update on
+that dispute I filed?" — nothing durable was said in that sentence, so a
+profile store has nothing to retrieve. The episodic log is what makes the
+follow-up work.
+
+Why not one big store? Because the two need opposite retrieval. Semantic
+facts must ALL be present or the agent re-asks something it was told. Episodes
+grow without limit, so you must select — and "the last 3" is the crudest
+version of that selection. Merge them and you're forced to pick one policy for
+both, which is wrong for one of them.
+
+    load_semantic()         -> everything
+    load_recent_episodes()  -> the tail only
 """
 
 import json
 import os
 from datetime import date
 from anthropic import Anthropic
+from dotenv import load_dotenv
+
+load_dotenv()  # reads ANTHROPIC_API_KEY from the repo-root .env
 
 client = Anthropic()
 MODEL = "claude-sonnet-5"
 
 STORE_PATH = "memory_store.json"
+
+
+def _text(response) -> str:
+    """Pull the reply text out of a response.
+
+    Do NOT write _text(response). content[0] is often a
+    ThinkingBlock — the model reasoning before it answers — and ThinkingBlock
+    has no .text attribute, so that shortcut dies with a confusing
+    AttributeError. It only happens on some turns, which is what makes it
+    nasty: it passes in testing and fails later. Always search by block type.
+    """
+    for block in response.content:
+        if block.type == "text":
+            return block.text
+    return ""
+
+
+# Shape on disk, per customer:
+#   {"cust_5510": {"semantic": {...},           <- dict, overwritten
+#                  "episodic": [{date, summary}]}}  <- list, appended
+# One file with two sections, because they're read on different schedules.
 
 
 def _load_store() -> dict:
@@ -26,10 +74,17 @@ def _write_store(store: dict):
 
 
 def _get_customer(store: dict, customer_id: str) -> dict:
+    # setdefault creates the two-section skeleton on first contact, so every
+    # writer below can assume both keys exist.
     return store.setdefault(customer_id, {"semantic": {}, "episodic": []})
 
 
+# ---------- Semantic: facts, overwritten in place ----------
+
 def save_semantic_fact(customer_id: str, key: str, value: str):
+    # Assignment, not append — the newest value for a key replaces the old
+    # one. A customer who changes their phone number has ONE phone number,
+    # and keeping the history here would mean the agent reads out both.
     store = _load_store()
     cust = _get_customer(store, customer_id)
     cust["semantic"][key] = value
@@ -41,7 +96,12 @@ def load_semantic(customer_id: str) -> dict:
     return store.get(customer_id, {}).get("semantic", {})
 
 
+# ---------- Episodic: events, appended forever ----------
+
 def add_episode(customer_id: str, summary: str):
+    # Append, never overwrite. Each episode is stamped with its date, because
+    # "disputed a charge" means something different last week than last year —
+    # recency is part of the fact.
     store = _load_store()
     cust = _get_customer(store, customer_id)
     cust["episodic"].append({"date": date.today().isoformat(), "summary": summary})
@@ -49,6 +109,15 @@ def add_episode(customer_id: str, summary: str):
 
 
 def load_recent_episodes(customer_id: str, n: int = 3) -> list:
+    """The tail, not the whole list.
+
+    This cap is the entire reason episodic memory is separate. A five-year
+    customer has hundreds of episodes; injecting them all would blow the
+    context window, cost a fortune per turn, and bury the relevant one in
+    noise. Recency is the cheapest useful relevance heuristic — a production
+    system would rank by embedding similarity to the current message instead,
+    but the principle is the same: SELECT, don't dump.
+    """
     store = _load_store()
     episodes = store.get(customer_id, {}).get("episodic", [])
     return episodes[-n:]
@@ -65,43 +134,80 @@ def extract_semantic_facts(message: str) -> dict:
         ),
         messages=[{"role": "user", "content": message}],
     )
+    # "Reply with ONLY valid JSON, no markdown fences" is an instruction, not
+    # a guarantee — the model wraps its answer in ```json fences often enough
+    # that skipping this step makes extraction return {} on most turns and
+    # semantic memory silently stays empty. Strip fences, THEN parse.
+    text = _text(response).strip()
+    if text.startswith("```"):
+        text = text.strip("`").removeprefix("json").strip()
     try:
-        return json.loads(response.content[0].text.strip())
+        return json.loads(text)
     except json.JSONDecodeError:
-        return {}
+        return {}  # learned nothing this turn — never crash the conversation
 
 
 def summarize_episode(customer_message: str, agent_reply: str) -> str:
+    """Compress a whole exchange into one line before storing it.
+
+    Storing raw transcripts would defeat the purpose — you'd be back to
+    unbounded context. max_tokens=60 enforces the compression budget: an
+    episode has to earn its place in a future prompt in one sentence.
+
+    Cost note: this makes THREE model calls per turn (reply + fact extraction
+    + summary). Fine for a lab. In production you'd summarize on session end
+    rather than per message, or batch it out of the response path entirely —
+    the customer is waiting on the reply, not on the bookkeeping.
+    """
     response = client.messages.create(
         model=MODEL, max_tokens=60,
         system="Summarize this customer service exchange in ONE short sentence, third person.",
         messages=[{"role": "user", "content": f"Customer: {customer_message}\nAgent: {agent_reply}"}],
     )
-    return response.content[0].text.strip()
+    return _text(response).strip()
 
 
 def chat(customer_id: str, message: str) -> str:
     semantic = load_semantic(customer_id)
     episodes = load_recent_episodes(customer_id)
 
+    # Two LABELED sections, not one merged blob. The labels matter: the model
+    # needs to know that "prefers Priya" is currently true while "disputed a
+    # charge on the 10th" is something that happened. Flatten them together
+    # and you get an agent that treats a stale event as a present fact.
     parts = ["You are a banking support agent."]
     if semantic:
         known = "\n".join(f"- {k}: {v}" for k, v in semantic.items())
         parts.append(f"Known facts about this customer:\n{known}")
     if episodes:
+        # Dates are included deliberately — they let the model calibrate
+        # ("earlier today" vs "back in March") instead of treating every
+        # episode as equally fresh.
         history = "\n".join(f"- {e['date']}: {e['summary']}" for e in episodes)
         parts.append(f"Recent history with this customer:\n{history}")
+    # Different instruction per memory type: facts must not be re-asked;
+    # history should be referenced only "when relevant". An agent that recites
+    # your history back at you every turn is unsettling, not helpful.
     parts.append("Do not re-ask for known facts. Reference recent history naturally when relevant.")
     system = "\n\n".join(parts)
 
+    # Generous budget: a reply cut off mid-sentence looks exactly like the
+    # agent having forgotten something, which makes the memory payoff in
+    # session 2 impossible to read.
     response = client.messages.create(
-        model=MODEL, max_tokens=300, system=system,
+        model=MODEL, max_tokens=700, system=system,
         messages=[{"role": "user", "content": message}],
     )
-    reply = response.content[0].text
+    reply = _text(response)
 
+    # Write-back happens AFTER the reply. Both stores are updated from this
+    # turn for the benefit of the NEXT one — the model already had this
+    # message in full, so nothing here changes the answer just given.
     for k, v in extract_semantic_facts(message).items():
         save_semantic_fact(customer_id, k, v)
+    # Note the episode summarizes BOTH sides. "Customer asked about a charge"
+    # loses the outcome; what makes session 2 work is knowing what the agent
+    # said it would do.
     add_episode(customer_id, summarize_episode(message, reply))
 
     return reply

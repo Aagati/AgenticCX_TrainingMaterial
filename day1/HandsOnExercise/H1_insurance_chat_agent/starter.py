@@ -13,11 +13,14 @@ import re
 from typing import List
 from pydantic import BaseModel, Field, ValidationError
 from anthropic import Anthropic
+from dotenv import load_dotenv
+
+load_dotenv()  #load environment variables
 
 client = Anthropic()
 MODEL = "claude-sonnet-5"
 
-with open("knowledge_base.json") as f:
+with open("day1\\HandsOnExercise\\H1_insurance_chat_agent\\knowledge_base.json") as f:
     KB = json.load(f)
 
 STOPWORDS = {"the", "is", "a", "an", "of", "to", "for", "my", "does", "do",
@@ -25,15 +28,9 @@ STOPWORDS = {"the", "is", "a", "an", "of", "to", "for", "my", "does", "do",
 
 
 class GroundedAnswer(BaseModel):
-    """TODO 1: Define three fields:
-      - answer: str
-      - citations: List[str]
-      - can_resolve: bool
-    Add a short Field(description=...) to each — the description text is
-    what the model actually reads when deciding how to fill the field in,
-    so it's not just documentation, it's part of the prompt.
-    """
-    pass
+    answer:str
+    citations:List[str]
+    can_resolve:bool
 
 
 SUBMIT_ANSWER_TOOL = {
@@ -63,7 +60,15 @@ def retrieve(question: str, top_k: int = 2):
          "I don't have this information" path later).
     Return a list of dicts (the KB doc objects themselves).
     """
-    raise NotImplementedError
+    q = set(_tokenize(question))
+    scored = []
+    for docs in KB:
+        d = set(_tokenize(docs["title"] + " " + docs["text"]))
+        score = len(q & d)
+        scored.append((score, docs))
+        scored.sort(key=lambda a: a[0], reverse=True)
+        return [docs for score, docs in scored[:top_k] if score > 0]
+    
 
 
 def build_grounded_prompt(question: str, docs: list) -> str:
@@ -73,7 +78,15 @@ def build_grounded_prompt(question: str, docs: list) -> str:
     context and to list every doc_id it relied on. No need to mention
     citation FORMAT (like brackets) anymore — the tool schema handles that.
     """
-    raise NotImplementedError
+    if not docs:
+        context_block = "(No matching policy conditions found)"
+    else:
+        context_block = "\n".join(
+            f"[{d['id']}] {d['title']}\n{d['text']}" for d in docs
+        )
+    prompt = f"Context retrieved policy clauses: {context_block} \nCustomer question: {question}\nInstructions: Answer using ONLY the given CONTEXT, list every `doc_id` you referred to while answering the questions and provide answer in 2-3 sentences. If the context does not contain the answerm, set can_resolve to False and set answer to 'I dont know this information' or 'I don't have relevant policy conditions matching your query'."
+    return prompt
+
 
 
 def answer_question(question: str) -> GroundedAnswer:
@@ -89,7 +102,29 @@ def answer_question(question: str) -> GroundedAnswer:
          (a hallucinated citation should never reach the customer silently).
       5. Return the validated GroundedAnswer.
     """
-    raise NotImplementedError
+    docs = retrieve(question)
+    valid_ids = {d["id"] for d in docs}
+    prompt = build_grounded_prompt(question, docs)
+    response = client.messages.create(
+        model=MODEL,
+        max_tokens=300,
+        system=(
+            "You are a policy Q&A assistant for a leading insurance company. Answer Only from the context provided in the user message. Do not answer from external knowledge."
+        ),
+        tools=[SUBMIT_ANSWER_TOOL],
+        tool_choice={"type": "tool", "name": "submit_grounded_answer"},
+        messages=[{"role": "user", "content": prompt}],
+    )
+
+    call = next(b for b in response.content if b.type == "tool_use")
+    try:
+        result = GroundedAnswer(**call.input)
+    except ValidationError as e:
+        raise ValueError(f"Tool output failed validation: {e}")
+    bad_citations = [c for c in result.citations if c not in valid_ids]
+    if bad_citations:
+        raise RuntimeError(f"Model cited docs are INVALID: {bad_citations}")
+    return result
 
 
 if __name__ == "__main__":

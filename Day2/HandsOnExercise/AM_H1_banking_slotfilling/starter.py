@@ -14,6 +14,9 @@ from typing import Optional
 from datetime import datetime
 from pydantic import BaseModel, Field
 from anthropic import Anthropic
+from dotenv import load_dotenv
+
+load_dotenv()  # reads ANTHROPIC_API_KEY from the repo-root .env
 
 client = Anthropic()
 MODEL = "claude-sonnet-5"

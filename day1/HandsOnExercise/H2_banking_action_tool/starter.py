@@ -17,7 +17,8 @@ class BlockCardInput(BaseModel):
       - reason: str
     Give each a Field(description=...).
     """
-    pass
+    card_last4: str = Field(description="The last 4 digits of the card to block.")
+    reason: str = Field(description="The reason for blocking the card.")
 
 
 BLOCK_CARD_TOOL = {
@@ -39,7 +40,16 @@ BLOCK_CARD_TOOL = {
 #    been given one yet
 #  - tells it a vague/hesitant reply ("maybe", "I think so") does NOT count
 #    as confirmation -- it should ask again rather than guess
-SYSTEM_PROMPT = None  # TODO
+SYSTEM_PROMPT = f""""
+                    You are a banking support agent. You have access to the following tool:
+                    {BLOCK_CARD_TOOL}
+                    RULES TO FOLLOW FOR USING BLOCK_CARD TOOL:
+                    1. You must NOT call the block_card tool unless the customer has given clear and explicit confirmation to block the card.
+                    2. If the customer has not given a clear confirmation, YOU MUST ask a clarifying or confirming question before proceeding.
+                    3.A vague or hesitant reply does NOT count towards confirmation, so make sure the rules are followed correctly.
+                    4. If the user says NO or expresses that they dont want to proceed, you must terminate the conversation and not call the block_card tool.
+                    5. After a card is blocked reassure the user that they will receive a new card in the mail within 5-7 business days and that they should contact support if they have any further queries.
+                    6. Be precise and reassuring in your tone."""
 
 
 def block_card(card_last4: str, reason: str) -> dict:
@@ -50,7 +60,18 @@ def block_card(card_last4: str, reason: str) -> dict:
     line and return {"status": "blocked", "confirmation_number": "BLK-88213",
     "card_last4": <validated value>}.
     """
-    raise NotImplementedError
+    try:
+        validate_input = BlockCardInput(card_last4=card_last4, reason=reason)
+        print
+    except ValidationError as e:
+        return {"error": str(e)}
+    print(f"[SYSTEM] Card ending {validate_input.card_last4} has been blocked for reason: {validate_input.reason}.")
+    return {
+        "status": "blocked",
+        "confirmation_number": "BLOCKCARD_12345",
+        "card_last4": validate_input.card_last4
+    }
+    
 
 
 def run_turn(messages: list) -> list:
@@ -64,7 +85,29 @@ def run_turn(messages: list) -> list:
 
     If there's no tool_use block, just append the assistant's text reply.
     """
-    raise NotImplementedError
+    response = client.messages.create(
+        model=MODEL,
+        max_tokens=300,
+        system=SYSTEM_PROMPT,
+        tools=[BLOCK_CARD_TOOL],
+        messages=messages
+    )
+    tool_call = next((b for b in response.content if b.type == "tool_use"), None)
+    if tool_call:
+        tool_input = tool_call.input
+        result = block_card(**tool_input)
+        messages.append({"role": "tool_result", "content": result})
+        follow_up_response = client.messages.create(
+            model=MODEL,
+            max_tokens=300,
+            system=SYSTEM_PROMPT,
+            tools=[BLOCK_CARD_TOOL],
+            messages=messages
+        )
+        messages.append({"role": "assistant", "content": follow_up_response.content[0].text})
+    else:
+        messages.append({"role": "assistant", "content": response.content[0].text})
+    return messages
 
 
 if __name__ == "__main__":

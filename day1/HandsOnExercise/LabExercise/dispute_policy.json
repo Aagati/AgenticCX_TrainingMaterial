@@ -1,0 +1,37 @@
+[
+  {
+    "id": "DSP-001",
+    "title": "Card Disputes - Filing Window",
+    "text": "A cardholder may dispute a posted transaction within 60 days of the statement date on which it appeared. Disputes raised after 60 days are accepted only with documented evidence of delayed statement delivery, and must be reviewed by a specialist rather than filed directly."
+  },
+  {
+    "id": "DSP-002",
+    "title": "Card Disputes - Provisional Credit",
+    "text": "Once a dispute is filed, a provisional credit for the disputed amount is applied to the account within 10 business days while the investigation is open. Provisional credit is not a refund: if the investigation finds in favour of the merchant, the credit is reversed and the original charge stands."
+  },
+  {
+    "id": "DSP-003",
+    "title": "Card Disputes - Pending Transactions",
+    "text": "A transaction in pending status cannot be disputed. Pending authorisations may still be adjusted or dropped by the merchant before they post. The cardholder must wait until the transaction posts to the account, which takes up to 3 business days, before a dispute can be filed."
+  },
+  {
+    "id": "DSP-004",
+    "title": "Card Disputes - Card Replacement on Fraud Disputes",
+    "text": "Filing a dispute with reason code FRAUD permanently blocks the card associated with the transaction and triggers issue of a replacement card. This action is irreversible: the blocked card number cannot be reinstated even if the dispute is later withdrawn. A replacement card typically arrives in 5-7 business days."
+  },
+  {
+    "id": "DSP-005",
+    "title": "Card Disputes - Agent Authority Limit",
+    "text": "A support agent may file a dispute directly for amounts up to and including 5000 INR. Disputes for amounts above 5000 INR must be routed to a disputes specialist for review, who will contact the cardholder within 1 business day. The agent must not file, promise, or imply approval of an above-limit dispute."
+  },
+  {
+    "id": "DSP-006",
+    "title": "Card Disputes - Duplicate Disputes",
+    "text": "A transaction that is already under dispute cannot be disputed a second time. The cardholder should be given the existing case reference and the expected investigation timeline instead. Filing a duplicate dispute delays both cases and is treated as a processing error."
+  },
+  {
+    "id": "DSP-007",
+    "title": "Card Disputes - Merchant Contact Requirement",
+    "text": "For disputes with reason code SERVICE_NOT_RENDERED or GOODS_NOT_RECEIVED, the cardholder is expected to have attempted contact with the merchant first. The agent should ask whether the merchant was contacted and record the answer. This requirement does not apply to reason code FRAUD, where contacting the merchant is not expected."
+  }
+]

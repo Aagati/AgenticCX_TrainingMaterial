@@ -6,6 +6,9 @@ import json
 from typing import Optional
 from pydantic import BaseModel, Field, ValidationError, field_validator
 from anthropic import Anthropic
+from dotenv import load_dotenv
+
+load_dotenv()
 
 client = Anthropic()
 MODEL = "claude-sonnet-5"
@@ -43,7 +46,22 @@ class EscalationPayload(BaseModel):
     strings AND common placeholder values ("TBD", "N/A", "UNKNOWN",
     case-insensitive) — raise ValueError with a clear message.
     """
-    pass
+    summary: str = Field(description="A concise summary of the customer's issue.")
+    customer_sentiment: str = Field(description="The customer's emotional state (e.g., frustrated, confused, angry).")
+    order_id: Optional[str] = Field(default=None, description="The order ID relevant to the issue, if applicable.")
+    requested_action: str = Field(description="The specific action the customer is requesting (e.g., refund, replacement, cancellation).")
+    conversation_transcript: str = Field(description="The full transcript of the conversation so far, including both customer and agent messages.") 
+
+    @field_validator(
+        "summary", "customer_sentiment", "requested_action", "conversation_transcript"
+    )
+
+    @classmethod
+    def no_placeholder(cls, v):
+        if not v or v.strip().upper() in {"TBD", "N/A", "UNKNOWN"}:
+            raise ValueError("Field cannot be empty or a placeholder value (TBD, N/A, UNKNOWN).")
+        return v
+    
 
 
 ESCALATE_TOOL = {
@@ -91,7 +109,14 @@ def escalate_to_human(**kwargs) -> dict:
     and return {"ticket_id": "TCK-77190", "status": "queued_for_human",
     "eta_minutes": 3}.
     """
-    raise NotImplementedError
+    try:
+        payload = EscalationPayload(**kwargs)
+    except ValidationError as e:
+        return {"error": f"escalation payload rejected: {e}"}
+    
+    print(f"[SYSTEM] Escalation ticket created with details: {payload.json()}")
+    return {"ticket_id": "TCK-77190", "status": "queued_for_human", "eta_minutes": 3}
+
 
 
 TOOLS = [GET_ORDER_STATUS_TOOL, ESCALATE_TOOL]
@@ -105,7 +130,28 @@ def run_conversation(messages: list, max_iterations: int = 5) -> list:
     messages, and loop until the model responds with plain text (or
     max_iterations is hit).
     """
-    raise NotImplementedError
+    for _ in range(max_iterations):
+        response = client.messages.create(
+            model=MODEL,
+            max_tokens=400,
+            system=SYSTEM_PROMPT,
+            tools=TOOLS,
+            messages=messages,
+        )
+
+        tool_use_blocks = [b for b in response.content if b.type == "tool_use"]
+        if not tool_use_blocks:
+            messages.append({"role": "assistant", "content": response.content[0].text})
+            break
+
+        for block in tool_use_blocks:
+            tool_name = block.tool.name
+            tool_input = block.input
+            tool_func = TOOL_FUNCS.get(tool_name)
+            if tool_func:
+                result = tool_func(**tool_input)
+                messages.append({"role": "tool_result", "content": json.dumps(result)})
+    return messages
 
 
 if __name__ == "__main__":
