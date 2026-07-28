@@ -17,12 +17,23 @@ Read this file in the order the flow actually runs:
     1. slot definitions      -> what we must collect
     2. SlotExtraction        -> the typed contract the model must answer in
     3. validate_slot         -> Python decides what counts as valid
+    3b. reconcile_amount     -> what to say when the customer and the ledger disagree
     4. extract_slot_value    -> the one narrow model call
     5. run_flow              -> the state machine that drives it all
+
+Four named behaviors come out of this, and only the first three are the ones
+people usually build:
+
+    ERROR REPAIR    - unparseable input, re-ask with the specific problem
+    DISAMBIGUATION  - several candidates, ask instead of guessing
+    RECONCILIATION  - customer's number and the ledger's number disagree; say
+                      so out loud before filing against the ledger's
+    CONFIRMATION    - explicit yes before anything is written
 """
 
 import json
 import os
+import re
 from typing import Optional
 from datetime import datetime
 from pydantic import BaseModel, Field
@@ -62,6 +73,16 @@ class SlotExtraction(BaseModel):
     to commit to a structured answer, and Python decides what happens next."""
     found: bool = Field(description="True if the customer's message contains a value for this specific slot")
     value: Optional[str] = Field(default=None, description="The raw value as the customer stated it, unvalidated")
+    # Without this field, "around ninety dollars" and "ninety dollars" are
+    # indistinguishable by the time they reach Python — the hedge is flattened
+    # into 90.0 and the agent treats a guess as exact. Capturing HOW SURE the
+    # customer was is what lets reconcile_amount() phrase the mismatch
+    # honestly instead of silently overwriting their number.
+    approximate: bool = Field(
+        default=False,
+        description="True if the customer hedged the value ('around 90', 'about ten bucks', "
+                    "'ninety-ish', 'roughly') rather than stating it exactly",
+    )
 
 
 EXTRACT_SLOT_TOOL = {
@@ -101,14 +122,26 @@ def validate_slot(slot: str, raw_value: str):
             return False, "I couldn't read that as a date — could you use the format YYYY-MM-DD, like 2026-07-10?"
 
     if slot == "amount":
-        cleaned = v.replace("$", "").replace(",", "")
-        try:
-            amount = float(cleaned)
-            if amount <= 0:
-                return False, "The amount needs to be a positive number — what was the charge?"
-            return True, amount
-        except ValueError:
+        # The extractor returns the value AS THE CUSTOMER STATED IT, so this
+        # routinely receives "about 90 dollars" or "$1,234.50" rather than a
+        # bare number. float() on any of those raises, which would send a
+        # perfectly understandable answer back through error repair.
+        #
+        # So: pull out the first number and use it. The line this draws is
+        # "are there digits?" — "about 90 dollars" is readable, "ninety-ish"
+        # genuinely is not and still gets repaired. Note we deliberately do
+        # NOT try to interpret number words; guessing at "ninety-ish" is how
+        # you file a dispute for an amount the customer never said.
+        cleaned = v.replace(",", "")
+        # The leading -? matters: without it "-5" parses as 5.0 and sails past
+        # the positive-number check below.
+        match = re.search(r"-?\d+(?:\.\d+)?", cleaned)
+        if match is None:
             return False, "I couldn't read that as an amount — could you give me just the number, like 45.00?"
+        amount = float(match.group())
+        if amount <= 0:
+            return False, "The amount needs to be a positive number — what was the charge?"
+        return True, amount
 
     if slot == "reason":
         if len(v) < 5:
@@ -128,6 +161,57 @@ def find_matching_transactions(slots: dict):
         t for t in TRANSACTIONS
         if t["account_last4"] == slots["account_last4"] and t["date"] == slots["transaction_date"]
     ]
+
+
+# ---------- 3b. Reconciliation ----------
+#
+# find_matching_transactions() deliberately ignores the amount, which means the
+# customer's number and the ledger's number can disagree and the flow will
+# happily carry on. Something has to NOTICE that and say it out loud.
+#
+# Without this step the correction is silent: the customer says "about $90",
+# the summary prints "$89.99", and they're expected to spot a changed number
+# in a summary line. Silent correction is how a customer confirms a dispute on
+# a transaction they never meant.
+
+AMOUNT_TOLERANCE_RATIO = 0.10   # within 10% reads as ordinary mis-remembering
+AMOUNT_TOLERANCE_FLOOR = 2.00   # ...but always allow at least $2 of slack
+
+
+def amounts_agree(claimed: float, ledger: float) -> bool:
+    """Is the gap small enough to be normal human recall, or is it a red flag?
+
+    The threshold is a policy decision, so it lives in named constants rather
+    than a magic number buried in an if. $90 vs $89.99 is rounding. $90 vs
+    $890 is a different transaction, a typo, or fraud — and the three need
+    different handling, which is why this returns a verdict the caller acts on.
+    """
+    tolerance = max(AMOUNT_TOLERANCE_FLOOR, claimed * AMOUNT_TOLERANCE_RATIO)
+    return abs(claimed - ledger) <= tolerance
+
+
+def reconcile_amount(claimed: float, approximate: bool, ledger: float):
+    """Returns (line_to_say, needs_review).
+
+    line_to_say is None when the two amounts match to the cent — there is
+    nothing to reconcile and saying so would just be noise.
+
+    needs_review is True when the gap is too big to wave through. Note it does
+    NOT block the dispute: the customer may be right and the ledger stale. It
+    marks the record for a human, which is the honest response to "I can't
+    tell which of these numbers is correct."
+    """
+    gap = abs(claimed - ledger)
+    if gap < 0.01:
+        return None, False
+
+    hedge = "around " if approximate else ""
+    if amounts_agree(claimed, ledger):
+        return (f"You mentioned {hedge}${claimed:.2f} — the charge I found is "
+                f"${ledger:.2f}. I'll use the amount on the account."), False
+    return (f"You mentioned {hedge}${claimed:.2f}, but the closest charge I can see is "
+            f"${ledger:.2f} — that's a ${gap:.2f} difference, so I want to check "
+            f"before filing anything."), True
 
 
 # ---------- 4. The one model call ----------
@@ -150,7 +234,11 @@ def extract_slot_value(slot: str, customer_message: str) -> SlotExtraction:
     response = client.messages.create(
         model=MODEL,
         max_tokens=100,
-        system=f"Extract only the value for the slot '{slot}' from the customer's message, if present.",
+        system=(
+            f"Extract only the value for the slot '{slot}' from the customer's message, "
+            "if present. Set approximate=true when the customer hedges the value "
+            "('about', 'around', 'roughly', '-ish') instead of stating it exactly."
+        ),
         tools=[EXTRACT_SLOT_TOOL],
         tool_choice={"type": "tool", "name": "submit_extraction"},
         messages=[{"role": "user", "content": customer_message}],
@@ -172,7 +260,8 @@ def run_flow():
     off the code and test without an API key.
     """
     print("AGENT: I can help you dispute a transaction. Let's start.")
-    slots = {}  # the conversation state — one source of truth
+    slots = {}       # the conversation state — one source of truth
+    hedged = {}      # slot -> was the customer hedging? kept for reconciliation
 
     for slot in REQUIRED_SLOTS:
         filled = False
@@ -196,6 +285,10 @@ def run_flow():
             ok, result = validate_slot(slot, extraction.value)
             if ok:
                 slots[slot] = result
+                # Carry the hedge forward. validate_slot() normalizes "about
+                # ninety" to 90.0 and the uncertainty would be lost right here
+                # if we didn't record it alongside the value.
+                hedged[slot] = extraction.approximate
                 filled = True
             else:
                 print(f"AGENT: {result}")
@@ -210,11 +303,32 @@ def run_flow():
     # DISAMBIGUATION: the flow's second branch. Same account and date can hold
     # several charges, and picking one for the customer risks disputing the
     # wrong transaction. When ambiguous, ask — don't guess.
+    claimed_amount = slots["amount"]
+    amount_hedged = hedged.get("amount", False)
+
     matches = find_matching_transactions(slots)
+    # The claimed amount is useless for FILTERING (it's half-remembered) but
+    # excellent for RANKING. Sorting by proximity puts the most likely
+    # candidate first without ever excluding the others.
+    matches.sort(key=lambda t: abs(t["amount"] - claimed_amount))
+
+    needs_review = False
     if len(matches) > 1:
         print("AGENT: I found more than one transaction on that date. Which one is it?")
         for i, t in enumerate(matches, 1):
-            print(f"  {i}. ${t['amount']:.2f} at {t['merchant']}")
+            # Show each candidate's distance from what the customer said, so a
+            # list of numbers becomes a list of numbers they can reason about.
+            gap = abs(t["amount"] - claimed_amount)
+            note = "" if gap < 0.01 else f"  ({'closest to' if amounts_agree(claimed_amount, t['amount']) else 'differs from'} the ${claimed_amount:.2f} you mentioned)"
+            print(f"  {i}. ${t['amount']:.2f} at {t['merchant']}{note}")
+        if not amounts_agree(claimed_amount, matches[0]["amount"]):
+            # Nothing on this date is close to what they remember. Usually the
+            # DATE is wrong, not the amount — say so rather than letting them
+            # pick a transaction they don't recognize.
+            print(f"AGENT: Heads up — none of these are close to the "
+                  f"${claimed_amount:.2f} you mentioned. If none look right, the "
+                  f"date might be off and we can search another day.")
+            needs_review = True
         choice = input("YOU: ").strip()
         try:
             chosen = matches[int(choice) - 1]
@@ -229,6 +343,14 @@ def run_flow():
         # and our mock data incomplete. Real systems flag this for review.
         chosen = {"merchant": "(not found in our records)", "amount": slots["amount"]}
 
+    # RECONCILIATION: say the correction out loud BEFORE the summary. The
+    # customer stated one number and we're about to file a different one —
+    # that swap gets named, not slipped into a summary line and hoped past.
+    line, mismatch = reconcile_amount(claimed_amount, amount_hedged, chosen["amount"])
+    if line:
+        print(f"\nAGENT: {line}")
+    needs_review = needs_review or mismatch
+
     # CONFIRMATION GATE: read the collected state back and require an explicit
     # yes before the write. This is the same principle as Day 1's H2 lab —
     # anything with real-world consequences gets confirmed first, and the
@@ -237,10 +359,19 @@ def run_flow():
     print("\nAGENT: Here's what I have —")
     print(f"  Account ending {slots['account_last4']}, {slots['transaction_date']}, "
           f"${chosen['amount']:.2f} at {chosen['merchant']}")
+    if abs(claimed_amount - chosen["amount"]) >= 0.01:
+        # Both numbers survive into the record. "Customer claimed ~$90, ledger
+        # shows $89.99" is evidence; keeping only one of them destroys it.
+        hedge = "~" if amount_hedged else ""
+        print(f"  (you said {hedge}${claimed_amount:.2f} — filing against the ${chosen['amount']:.2f} charge)")
     print(f"  Reason: {slots['reason']}")
     confirm = input("AGENT: Shall I file this dispute? (yes/no)\nYOU: ").strip().lower()
     if confirm.startswith("y"):
         print("AGENT: Dispute filed. You'll hear back within 5-7 business days.")
+        if needs_review:
+            # Not a block — the customer may be right and the ledger stale.
+            # The gap is flagged for a human instead of being averaged away.
+            print("AGENT: I've also flagged the amount difference for a specialist to double-check.")
     else:
         print("AGENT: No problem, I won't file it. Let me know if anything changes.")
 
@@ -248,5 +379,16 @@ def run_flow():
 if __name__ == "__main__":
     run_flow()
 
-# Try it with: account 4471, date 2026-07-10 (two matches -> disambiguation),
-# an invalid amount like "forty-five-ish" (error repair), then a valid one.
+# Try it with:
+#   4471 / 2026-07-10 / 45      -> two matches, exact amount: disambiguation only
+#   4471 / 2026-07-09 / "about 90"
+#                               -> RECONCILIATION: one match at $89.99, gap is
+#                                  1 cent, agent names the correction and files
+#   4471 / 2026-07-10 / "about 90"
+#                               -> RECONCILIATION under ambiguity: candidates are
+#                                  $45.00 and $12.50, neither close to $90, so the
+#                                  agent warns the DATE may be wrong and flags the
+#                                  filing for review
+#   4471 / 2026-07-10 / "forty-five-ish"
+#                               -> ERROR REPAIR if the model can't normalize it to
+#                                  a number, then a clean retry
