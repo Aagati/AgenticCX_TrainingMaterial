@@ -1,24 +1,65 @@
 """
 AM · H1 — Banking Voice Loop + Latency Measurement (STARTER)
 
-STT tries a REAL Deepgram Nova-3 call first (your TODO 1 below) and falls
-back to the simulated fake_stt() if DEEPGRAM_API_KEY isn't set, the account
-can't reach nova-3, or there's no matching WAV in sample_audio/ — so this
-lab runs for every student, key or no key. TTS stays simulated either way
-(see README) — the LLM call is real and uses Claude's streaming API, so
-"LLM ms" genuinely measures time-to-first-token rather than full completion
-time.
+STT tries a REAL Deepgram Nova-3 call first (your TODO 1 below) and TTS
+tries a REAL Deepgram Aura streaming call (TODO 4) — both fall back to
+their simulated counterpart if DEEPGRAM_API_KEY isn't set, the relevant
+model/socket isn't reachable, or there's no matching WAV in sample_audio/
+— so this lab runs for every student, key or no key. The LLM call is real
+either way, uses Claude's streaming API with tool use (a mock account
+ledger — see GET_ACCOUNT_INFO_TOOL/FREEZE_CARD_TOOL above), so "LLM ms"
+genuinely measures time-to-first-token rather than full completion time.
 """
 
+import contextlib
+import json
 import os
 import time
 import random
+import wave
 from pathlib import Path
 
 from anthropic import Anthropic
 
 client = Anthropic()
 MODEL = "claude-sonnet-5"
+
+with open(Path(__file__).parent / "account_ledger.json") as f:
+    ACCOUNT = json.load(f)
+
+GET_ACCOUNT_INFO_TOOL = {
+    "name": "get_account_info",
+    "description": "Look up the caller's current balance, card status, and most recent paycheck deposit.",
+    "input_schema": {"type": "object", "properties": {}, "required": []},
+}
+
+FREEZE_CARD_TOOL = {
+    "name": "freeze_card",
+    "description": "Freeze the caller's card immediately — use this when they report it lost or stolen.",
+    "input_schema": {"type": "object", "properties": {}, "required": []},
+}
+
+TOOLS = [GET_ACCOUNT_INFO_TOOL, FREEZE_CARD_TOOL]
+
+
+def get_account_info() -> dict:
+    return {k: v for k, v in ACCOUNT.items() if k != "customer_id"}
+
+
+def freeze_card() -> dict:
+    ACCOUNT["card_status"] = "frozen"
+    return {"card_status": ACCOUNT["card_status"], "confirmation": "Card frozen successfully."}
+
+
+TOOL_FUNCS = {"get_account_info": get_account_info, "freeze_card": freeze_card}
+
+SYSTEM_PROMPT = (
+    "You are a banking phone support agent. Reply in short, natural, "
+    "spoken-style sentences — this response will be read aloud by a voice "
+    "synthesizer, not displayed as text. No bullet points, no markdown. "
+    "Use get_account_info for balance or deposit questions, and freeze_card "
+    "when the caller reports their card lost or stolen."
+)
 
 STT_LATENCY_RANGE_MS = (120, 220)
 TTS_FIRST_BYTE_RANGE_MS = (60, 100)
@@ -27,15 +68,20 @@ BUDGET_MS = 700
 AUDIO_DIR = Path(__file__).parent / "sample_audio"
 STT_MODEL_PREFERRED = "nova-3"
 STT_MODEL_FALLBACK = "nova-2"  # one tier down — cheaper per-minute, still batch-capable
+TTS_MODEL = "aura-2-asteria-en"
+TTS_ENCODING = "linear16"  # raw PCM — the streaming TTS socket only speaks
+TTS_SAMPLE_RATE = "16000"  # linear16/mulaw/alaw, not mp3 (that's REST-only)
 
 # --- Deepgram setup (given — this is plumbing, not today's exercise) ---
 deepgram = None
 STT_MODEL = None
+SpeakV1Text = None
 
 if os.environ.get("DEEPGRAM_API_KEY"):
     try:
         from deepgram import DeepgramClient
         from deepgram.core.api_error import ApiError as DeepgramApiError
+        from deepgram.speak.v1.types.speak_v1text import SpeakV1Text
 
         deepgram = DeepgramClient(api_key=os.environ["DEEPGRAM_API_KEY"])
 
@@ -102,12 +148,22 @@ def stt(user_utterance: str, audio_path: Path | None) -> str:
 def call_llm_streaming(transcript: str):
     """
     TODO 2: A REAL streaming call to Claude using client.messages.stream()
-    as a context manager. System prompt: a banking phone agent, short
-    spoken-style sentences, no markdown. As you iterate
-    `for text in stream.text_stream:`, record time.perf_counter() the FIRST
-    time you receive a chunk (that's time-to-first-token) and accumulate
-    all chunks into the full reply text.
-    Return (full_text, time_to_first_token_seconds, full_completion_seconds).
+    as a context manager, WITH tool use (tools=TOOLS, system=SYSTEM_PROMPT
+    — both given above). As you iterate `for text in stream.text_stream:`,
+    record time.perf_counter() the FIRST time you receive a chunk (that's
+    time-to-first-token) and accumulate all chunks into the full reply
+    text. After the stream ends, call stream.get_final_message() and check
+    its .content for a tool_use block:
+      - no tool_use -> you already have the spoken reply, num_llm_calls=1
+      - tool_use -> call TOOL_FUNCS[tool_use.name](), append the assistant
+        turn (final.content) and a user turn with a tool_result block
+        (tool_use_id=tool_use.id, content=json.dumps(result)) to messages,
+        then make a SECOND streamed call the same way. THAT second stream's
+        first-token time and text are what you report — it's the one that
+        actually produces the spoken reply. num_llm_calls=2.
+    Return (full_text, time_to_first_token_seconds, full_completion_seconds,
+    num_llm_calls) — mirrors PM·H1: tool turns cost roughly double the LLM
+    time, and the caller should be able to see that in the numbers.
     """
     raise NotImplementedError
 
@@ -121,22 +177,82 @@ def fake_tts(text: str) -> bytes:
     raise NotImplementedError
 
 
-def run_turn(user_utterance: str, audio_path: Path | None = None):
+def real_tts_stream(tts_ws, text: str) -> tuple[bytes, float]:
     """
-    TODO 4: Time each stage with time.perf_counter():
+    TODO 4: Wire the real Deepgram streaming TTS call. tts_ws is an
+    ALREADY-OPEN socket (see open_tts_stream() below — one connection is
+    opened for the whole call and reused turn-to-turn, which is what makes
+    this fast: a fresh handshake alone costs ~1.3-1.6s before any audio
+    exists, reused it's ~300-400ms first-byte). Steps:
+      1. tts_ws.send_text(SpeakV1Text(text=text)) then tts_ws.send_flush()
+      2. Iterate `for msg in tts_ws:` — bytes/bytearray messages are audio
+         chunks (record time.perf_counter() the FIRST time you see one,
+         that's time-to-first-byte); stop the loop once you get a message
+         whose type(msg).__name__ == "SpeakV1Flushed"
+      3. Return (b"".join(all audio chunks), time_to_first_byte_seconds)
+    """
+    raise NotImplementedError
+
+
+def tts(text: str, tts_ws) -> tuple[bytes, float, bool]:
+    """Given — tries real_tts_stream() over tts_ws when it's open; falls
+    back to fake_tts() otherwise (no key, socket never opened, or the call
+    fails at runtime). Returns (audio_bytes, tts_seconds, used_real) where
+    tts_seconds is time-to-FIRST-byte for the real path, not total
+    synthesis time — same "first vs full" principle as the LLM stage."""
+    if tts_ws is not None:
+        try:
+            audio, ttfb = real_tts_stream(tts_ws, text)
+            return audio, ttfb, True
+        except Exception as exc:
+            print(f"Deepgram TTS call failed ({exc}) — falling back to simulated TTS.")
+    t0 = time.perf_counter()
+    audio = fake_tts(text)
+    return audio, time.perf_counter() - t0, False
+
+
+@contextlib.contextmanager
+def open_tts_stream():
+    """Given — opens ONE persistent Deepgram TTS websocket for the whole
+    call (or a no-op null context if Deepgram isn't configured / the
+    handshake fails). Reusing a warm connection across turns instead of
+    reconnecting per turn is the actual latency win — see real_tts_stream's
+    docstring."""
+    if deepgram is None:
+        yield None
+        return
+    try:
+        with deepgram.speak.v1.connect(
+            model=TTS_MODEL, encoding=TTS_ENCODING, sample_rate=TTS_SAMPLE_RATE,
+        ) as ws:
+            yield ws
+    except Exception as exc:
+        print(f"Deepgram TTS websocket unavailable ({exc}) — using simulated TTS.")
+        yield None
+
+
+def run_turn(user_utterance: str, audio_path: Path | None = None, turn_index: int = 0, tts_ws=None):
+    """
+    TODO 5: Time each stage with time.perf_counter():
       - STT: time stt(user_utterance, audio_path) — NOT fake_stt() directly,
         so a turn with a matching WAV file goes through real Deepgram
-      - LLM: call call_llm_streaming(); use the returned ttft directly
-        (it's already measured internally) and also report full_completion
-        for comparison
-      - TTS: time fake_tts() directly (a fresh perf_counter pair around
-        just that call — don't reuse an old timestamp)
+      - LLM: call call_llm_streaming(); it now returns 4 values — use the
+        returned ttft directly (already measured internally), and also
+        report full_completion and num_llm_calls for comparison
+      - TTS: call tts(reply, tts_ws) — NOT fake_tts() directly, so a call
+        with an open tts_ws goes through real Deepgram. It returns
+        (audio_bytes, tts_seconds, used_real_tts); tts_seconds is already
+        measured for you, no extra perf_counter needed here.
     Compute TIME TO FIRST AUDIO = stt_ms + llm_ttft_ms + tts_ms (this is
     the number that determines whether the customer perceives the agent as
     responsive — NOT stt_ms + llm_full_completion_ms + tts_ms).
-    Print a breakdown showing STT, LLM time-to-first-token (and full
-    completion for comparison), TTS, and whether TIME TO FIRST AUDIO is
-    within BUDGET_MS.
+    Print a breakdown showing STT, LLM time-to-first-token (full completion
+    AND num_llm_calls — tool turns should show ~2 calls and noticeably
+    higher LLM time), TTS, and whether TIME TO FIRST AUDIO is within
+    BUDGET_MS. If used_real_tts, also save audio_bytes to
+    AUDIO_DIR/f"reply_{turn_index}.wav" as a proper mono 16-bit WAV (use
+    the wave module — sample rate is int(TTS_SAMPLE_RATE)) and print the
+    saved path.
     """
     raise NotImplementedError
 
@@ -147,10 +263,11 @@ if __name__ == "__main__":
         "Can you tell me if my paycheck deposited yet?",
         "I need to report my card as lost.",
     ]
-    for i, u in enumerate(utterances, start=1):
-        print(f"\n--- Turn: \"{u}\" ---")
-        wav_path = AUDIO_DIR / f"turn_{i}.wav"
-        run_turn(u, wav_path if wav_path.exists() else None)
+    with open_tts_stream() as tts_ws:
+        for i, u in enumerate(utterances, start=1):
+            print(f"\n--- Turn: \"{u}\" ---")
+            wav_path = AUDIO_DIR / f"turn_{i}.wav"
+            run_turn(u, wav_path if wav_path.exists() else None, turn_index=i, tts_ws=tts_ws)
 
 # To exercise the REAL Deepgram path instead of the simulated one: set
 # DEEPGRAM_API_KEY in .env, `pip install deepgram-sdk`, and drop up to 3

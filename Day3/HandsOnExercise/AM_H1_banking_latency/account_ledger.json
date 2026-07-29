@@ -1,0 +1,12 @@
+{
+  "customer_id": "cust_1042",
+  "name": "Jordan Rivera",
+  "balance": 2148.37,
+  "currency": "USD",
+  "card_status": "active",
+  "last_paycheck_deposit": {
+    "date": "2026-07-25",
+    "amount": 3120.00,
+    "status": "posted"
+  }
+}
