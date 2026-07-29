@@ -1,13 +1,20 @@
 """
 AM · H1 — Banking Voice Loop + Latency Measurement (STARTER)
 
-STT and TTS are SIMULATED (see README) — the LLM call is real and uses
-Claude's streaming API, so "LLM ms" genuinely measures time-to-first-token
-rather than full completion time.
+STT tries a REAL Deepgram Nova-3 call first (your TODO 1 below) and falls
+back to the simulated fake_stt() if DEEPGRAM_API_KEY isn't set, the account
+can't reach nova-3, or there's no matching WAV in sample_audio/ — so this
+lab runs for every student, key or no key. TTS stays simulated either way
+(see README) — the LLM call is real and uses Claude's streaming API, so
+"LLM ms" genuinely measures time-to-first-token rather than full completion
+time.
 """
 
+import os
 import time
 import random
+from pathlib import Path
+
 from anthropic import Anthropic
 
 client = Anthropic()
@@ -17,15 +24,79 @@ STT_LATENCY_RANGE_MS = (120, 220)
 TTS_FIRST_BYTE_RANGE_MS = (60, 100)
 BUDGET_MS = 700
 
+AUDIO_DIR = Path(__file__).parent / "sample_audio"
+STT_MODEL_PREFERRED = "nova-3"
+STT_MODEL_FALLBACK = "nova-2"  # one tier down — cheaper per-minute, still batch-capable
 
-def fake_stt(user_utterance: str) -> str:
+# --- Deepgram setup (given — this is plumbing, not today's exercise) ---
+deepgram = None
+STT_MODEL = None
+
+if os.environ.get("DEEPGRAM_API_KEY"):
+    try:
+        from deepgram import DeepgramClient
+        from deepgram.core.api_error import ApiError as DeepgramApiError
+
+        deepgram = DeepgramClient(api_key=os.environ["DEEPGRAM_API_KEY"])
+
+        def resolve_stt_model() -> str:
+            """Preflight the key against Deepgram's /v1/models endpoint
+            (management API — free, no transcription credits burned) and
+            confirm the account's batch catalog has a nova-3 variant. "nova-3"
+            never appears literally in the catalog — it's a version alias
+            that resolves server-side to canonical names like
+            "nova-3-general" — so the check matches on that prefix."""
+            try:
+                models = deepgram.manage.v1.models.list(include_outdated=False)
+                batch_canonical = {
+                    m.canonical_name for m in (models.stt or [])
+                    if m.batch and m.canonical_name
+                }
+                if any(n.startswith(STT_MODEL_PREFERRED) for n in batch_canonical):
+                    return STT_MODEL_PREFERRED
+                print(f"Deepgram key can't reach '{STT_MODEL_PREFERRED}' "
+                      f"(no matching model in this account's batch catalog) — "
+                      f"using '{STT_MODEL_FALLBACK}'.")
+            except DeepgramApiError as exc:
+                print(f"Deepgram model check failed ({exc}) — using '{STT_MODEL_FALLBACK}'.")
+            return STT_MODEL_FALLBACK
+
+        STT_MODEL = resolve_stt_model()
+    except Exception as exc:
+        print(f"Deepgram setup failed ({exc}) — real STT disabled, using simulated STT.")
+        deepgram = None
+
+
+def real_stt(audio_path: Path) -> str:
     """
-    TODO 1: Simulate STT latency by sleeping for a random duration in
-    STT_LATENCY_RANGE_MS (convert ms -> seconds), then just return
-    user_utterance unchanged (pretend it was "transcribed" perfectly —
-    today's lab is about latency, not accuracy).
+    TODO 1: Wire the real Deepgram call. Open audio_path in binary mode and
+    call deepgram.listen.v1.media.transcribe_file(request=<bytes>,
+    model=STT_MODEL, smart_format=True). The response shape is
+    response.results.channels[0].alternatives[0].transcript — return that
+    string.
     """
     raise NotImplementedError
+
+
+def fake_stt(user_utterance: str) -> str:
+    """Given — the simulated fallback used when real Deepgram isn't
+    available for this turn."""
+    delay_s = random.uniform(*STT_LATENCY_RANGE_MS) / 1000
+    time.sleep(delay_s)
+    return user_utterance
+
+
+def stt(user_utterance: str, audio_path: Path | None) -> str:
+    """Given — tries real_stt() against audio_path when Deepgram is
+    configured and the file exists; falls back to fake_stt() otherwise
+    (missing key, model unavailable, no WAV for this turn, or the call
+    itself fails at runtime)."""
+    if deepgram is not None and audio_path is not None and audio_path.exists():
+        try:
+            return real_stt(audio_path)
+        except Exception as exc:
+            print(f"Deepgram STT call failed ({exc}) — falling back to simulated STT.")
+    return fake_stt(user_utterance)
 
 
 def call_llm_streaming(transcript: str):
@@ -50,10 +121,11 @@ def fake_tts(text: str) -> bytes:
     raise NotImplementedError
 
 
-def run_turn(user_utterance: str):
+def run_turn(user_utterance: str, audio_path: Path | None = None):
     """
     TODO 4: Time each stage with time.perf_counter():
-      - STT: time fake_stt()
+      - STT: time stt(user_utterance, audio_path) — NOT fake_stt() directly,
+        so a turn with a matching WAV file goes through real Deepgram
       - LLM: call call_llm_streaming(); use the returned ttft directly
         (it's already measured internally) and also report full_completion
         for comparison
@@ -75,6 +147,14 @@ if __name__ == "__main__":
         "Can you tell me if my paycheck deposited yet?",
         "I need to report my card as lost.",
     ]
-    for u in utterances:
+    for i, u in enumerate(utterances, start=1):
         print(f"\n--- Turn: \"{u}\" ---")
-        run_turn(u)
+        wav_path = AUDIO_DIR / f"turn_{i}.wav"
+        run_turn(u, wav_path if wav_path.exists() else None)
+
+# To exercise the REAL Deepgram path instead of the simulated one: set
+# DEEPGRAM_API_KEY in .env, `pip install deepgram-sdk`, and drop up to 3
+# short (<10s) mono WAV files into a sample_audio/ folder next to this
+# script, named turn_1.wav, turn_2.wav, turn_3.wav (e.g. record with Windows
+# Voice Recorder). No WAVs / no key -> falls back to the simulation, no
+# code changes needed either way.

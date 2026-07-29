@@ -3,15 +3,18 @@
 **Track:** Banking | **Time box:** ~40 min | **Pattern practiced:** instrumented STT → LLM → TTS pipeline against the round-trip latency budget, with a genuinely-measured time-to-first-token
 
 ## A note on this lab's simulation
-This training room doesn't have microphones, phone lines, or API keys for
-Deepgram/Cartesia wired up for every student. So this lab **simulates the
-audio layer** — `fake_stt()` and `fake_tts()` stand in for real STT/TTS
-calls, with `time.sleep()` durations modeled on real published latencies
-for Deepgram Nova-3 and Cartesia Sonic-3. The **LLM call is real and
-streamed** — that part isn't simulated at all. The pipeline shape, the
-timing instrumentation, and the budget math are exactly what you'd build
-against a real LiveKit/Pipecat + Deepgram + Cartesia stack — swapping the
-audio fakes for real SDK calls later is a drop-in replacement, not a redesign.
+This training room doesn't have microphones or phone lines wired up for
+every student, so TTS stays **simulated** — `fake_tts()` stands in for a
+real TTS call, with a `time.sleep()` duration modeled on Cartesia Sonic-3's
+published time-to-first-audio-byte. STT is different: if you set
+`DEEPGRAM_API_KEY` and drop a couple of WAV files into `sample_audio/` (see
+Setup below), `run_turn()` calls **real Deepgram Nova-3** — no separate
+"real variant" file, it's the same `solution.py`/`starter.py` everyone
+runs. No key, no matching WAV, or the account can't reach nova-3? It
+transparently falls back to `fake_stt()`, modeled on Nova-3's published
+~120-220ms latency — so the lab runs either way, and `stt()` is the seam
+that makes the swap invisible to the rest of the pipeline. The **LLM call
+is real and streamed** either way — that part was never simulated.
 
 ## Scenario
 A banking customer calls in asking "What's my account balance?" Your job
@@ -22,8 +25,10 @@ voice agents target the 500-700ms band end to end.
 
 ## Your task
 Build an instrumented pipeline:
-1. `fake_stt(user_utterance)` — simulates a streaming STT call. Sleep for a
-   realistic Deepgram Nova-3-like latency, then return a transcript string.
+1. `real_stt(audio_path)` — a REAL Deepgram Nova-3 prerecorded-transcription
+   call (given `DEEPGRAM_API_KEY` + a WAV file — see Setup). `fake_stt()`
+   and the `stt()` dispatcher that falls back to it are already given; you
+   only need to fill in the actual Deepgram call.
 2. `call_llm_streaming(transcript)` — a REAL, STREAMED call to Claude.
    Measure time-to-first-token by timestamping the moment the first chunk
    arrives from `stream.text_stream`, not just when the whole thing finishes.
@@ -62,6 +67,16 @@ pip install anthropic
 export ANTHROPIC_API_KEY=sk-...
 python starter.py
 ```
+Runs fine with just the above (fake_stt handles every turn). To exercise
+the real Deepgram path for TODO 1:
+```bash
+pip install deepgram-sdk
+export DEEPGRAM_API_KEY=...   # already in .env if your room provisioned one
+```
+Then drop up to 3 short (<10s) mono WAV files into a `sample_audio/`
+folder next to this script, named `turn_1.wav`, `turn_2.wav`, `turn_3.wav`
+(e.g. record with Windows Voice Recorder). Turns without a matching WAV
+just use the simulation — mix and match freely.
 
 ## Stretch goals
 - Have `fake_tts` start on the first SENTENCE (split on `. ` / `? ` / `! `)
@@ -74,12 +89,3 @@ python starter.py
 - You now have two real numbers: time-to-first-token and full completion
   time. If a pipeline only ever reports the total, what decision might a
   team make incorrectly because they can't see this gap?
-
----
-
-## Alt-stack variant (optional)
-`solution_real_voice.py` — same latency-budget measurement, with
-fake_stt()/fake_tts() swapped for real Deepgram Nova-3 (STT) and
-ElevenLabs Flash v2.5 (TTS) calls. Needs `DEEPGRAM_API_KEY` +
-`ELEVENLABS_API_KEY`, and a few short WAV recordings (see the file's
-docstring for setup). See `requirements-multisdk.txt`.

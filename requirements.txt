@@ -37,7 +37,8 @@ livekit==1.1.13
 langfuse==4.14.1
 
 # Raw vendor SDKs (HandsOnExercise real-provider variants: Day1 solution_openai.py,
-# Day3 solution_real_voice.py, Day4 solution_real_mcp.py, Day5 eval_suite_langfuse.py)
+# Day3 AM_H1/PM_H1 solution.py+starter.py real Deepgram STT path, Day4
+# solution_real_mcp.py, Day5 eval_suite_langfuse.py)
 deepgram-sdk==7.5.0
 elevenlabs==2.59.0
 

@@ -13,8 +13,12 @@ inside the latency budget.
 
 ## Your task
 Build `VoiceAgent`, combining today's morning patterns:
-1. **Pipeline** (from AM·H1): `fake_stt()` → LLM → `fake_tts()`, fully
-   instrumented with per-stage timing.
+1. **Pipeline** (from AM·H1): `stt()` → LLM → `fake_tts()`, fully
+   instrumented with per-stage timing. `stt()` tries a REAL Deepgram
+   Nova-3 call (`real_stt()` — your TODO 1) against a WAV in
+   `sample_audio/` when `DEEPGRAM_API_KEY` is set, and transparently falls
+   back to the simulated `fake_stt()` otherwise — same pattern as AM·H1,
+   no separate variant file. TTS stays simulated either way.
 2. **Tool-calling mid-turn**: the LLM call must have a `get_claim_status`
    tool available (reuse the Day 2 tool-use loop pattern). When the caller
    asks about a claim, the agent should call the tool, then speak the
@@ -47,6 +51,16 @@ pip install anthropic
 export ANTHROPIC_API_KEY=sk-...
 python starter.py
 ```
+Runs fine with just the above (fake_stt handles every turn). To exercise
+the real Deepgram path for TODO 1:
+```bash
+pip install deepgram-sdk
+export DEEPGRAM_API_KEY=...   # already in .env if your room provisioned one
+```
+Then drop up to 2 short (<10s) mono WAV files into a `sample_audio/`
+folder next to this script: `turn_1.wav` (the claim-status question),
+`turn_2.wav` ("Great, thank you!"). No matching WAV just uses the
+simulation for that turn.
 
 ## Stretch goals
 - Add a second tool (e.g. `get_policy_summary`) and confirm the agent
