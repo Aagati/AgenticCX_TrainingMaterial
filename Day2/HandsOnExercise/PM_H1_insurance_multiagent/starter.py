@@ -9,15 +9,18 @@ whether a specialist is needed at all — "Hi there!" should get answered
 directly, not routed. And the specialists are no longer given all the data up
 front; each has a TOOL and fetches what it needs.
 
-That means three independent tool-use loops (claims, policy, supervisor), and
-the supervisor's "tool" is an entire sub-agent. The specialist's reply comes
-back as a tool_result like any other, which is the whole trick: to the
-supervisor, delegating to another agent looks exactly like calling a function.
+That means three agents (claims, policy, supervisor) each running a tool-use
+loop, and the supervisor's "tool" is an entire sub-agent. The specialist's
+reply comes back as a tool_result like any other, which is the whole trick:
+to the supervisor, delegating to another agent looks exactly like calling a
+function.
 
-You will write nearly the same loop three times. That is the signal to write
-it ONCE as a helper and pass in the tools and handlers — see solution.py's
-run_agent_loop(). Doing it that way also means the parallel-tool_use bug
-described in TODO 1 gets fixed in one place instead of three.
+The loop mechanics are PROVIDED below as run_agent_loop() — including the
+parallel-tool_use handling (one turn can contain several tool_use blocks; the
+API requires a tool_result for every one of them, not just the first) and the
+"final turn may have no text block" handling. That part is infrastructure,
+not the lesson. Your TODOs are the agent-specific pieces: each specialist's
+system prompt + tools + handler, wired into the shared loop.
 
 Part 2 then reuses all of it unchanged and only alters the last step.
 
@@ -50,6 +53,77 @@ with open(os.path.join(DATA_DIR, "claims_data.json")) as f:
 with open(os.path.join(DATA_DIR, "policy_clauses.json")) as f:
     POLICY_CLAUSES = json.load(f)
 
+STOPWORDS = {"the", "is", "a", "an", "of", "to", "for", "my", "does", "do",
+             "what", "how", "if", "and", "on", "in", "it", "am", "i", "while"}
+
+
+def _tokenize(text: str):
+    """Provided — same helper you had in Day 1's H1 lab. Use it in TODO 2
+    below instead of writing another tokenizer from scratch."""
+    words = re.findall(r"[a-z]+", text.lower())
+    return [w for w in words if w not in STOPWORDS and len(w) > 2]
+
+
+# ---------- Shared agent loop (provided) ----------
+#
+# Every agent below (both specialists and the supervisor) runs this same
+# loop, so the tool-use protocol only has to be gotten right once:
+#
+#   1. The model can return SEVERAL tool_use blocks in one turn (parallel
+#      tool use). The API requires a matching tool_result for EVERY one of
+#      them in the very next user message — handling only the first is a 400.
+#   2. After feeding results back the model may want to call tools again, so
+#      this loops rather than making a single follow-up call.
+#   3. The final turn may contain thinking + text blocks, so collect text
+#      blocks rather than assuming content[0].text (a bare
+#      next(b.text for b in response.content if b.type == "text") raises
+#      StopIteration when the turn is thinking + tool_use only).
+
+MAX_TOOL_TURNS = 4  # cap so a confused agent can't spin forever
+
+
+def _text_blocks(response) -> str:
+    return "\n\n".join(b.text for b in response.content if b.type == "text").strip()
+
+
+def run_agent_loop(system: str, messages: list, tools: list,
+                   handlers: dict, max_tokens: int = 700) -> str:
+    """Drive one agent until it produces a final text reply."""
+    for _ in range(MAX_TOOL_TURNS):
+        response = client.messages.create(
+            model=MODEL, max_tokens=max_tokens, system=system,
+            tools=tools, messages=messages,
+        )
+
+        tool_uses = [b for b in response.content if b.type == "tool_use"]
+        if not tool_uses:
+            return _text_blocks(response) or "(the model returned no text)"
+
+        # Append the assistant turn verbatim — thinking blocks included.
+        messages.append({"role": "assistant", "content": response.content})
+
+        results = []
+        for tool_use in tool_uses:
+            handler = handlers.get(tool_use.name)
+            if handler is None:
+                output = {"error": f"no handler registered for tool '{tool_use.name}'"}
+            else:
+                try:
+                    output = handler(**tool_use.input)
+                except Exception as exc:
+                    # A tool crash must still come back as a tool_result, or
+                    # the conversation is left in an unsendable state.
+                    output = {"error": f"{type(exc).__name__}: {exc}"}
+            results.append({
+                "type": "tool_result",
+                "tool_use_id": tool_use.id,
+                "content": output if isinstance(output, str) else json.dumps(output),
+            })
+
+        messages.append({"role": "user", "content": results})
+
+    return "(agent hit the tool-call limit without producing a final reply)"
+
 
 # ---------- Claims Specialist ----------
 
@@ -73,22 +147,28 @@ def get_claim_status(claim_id: str) -> dict:
 
 def run_claims_specialist(customer_message: str) -> str:
     """
-    TODO 1: Implement the Claims Specialist's own tool-use loop:
-      - system prompt: empathetic, status/next-step focused, has
-        get_claim_status available
-      - call the model with tools=[GET_CLAIM_STATUS_TOOL]
-      - if it calls the tool, execute get_claim_status(), feed the result
-        back, and get a final text reply
-      - if it doesn't call a tool (e.g. it needs to ask which claim id),
-        just return its text reply
-    Return the specialist's final text reply (a string).
-
-    Heads-up: one assistant turn can contain MORE THAN ONE tool_use block
-    (parallel tool use), and the API requires a matching tool_result for
-    every single one in the next user message. Handling only the first
-    tool_use block is a 400. Loop over all of them.
+    TODO 1: Write a system prompt for the Claims Specialist — empathetic,
+    status/next-step focused, has get_claim_status available and should ask
+    for a claim id if none was given. Then call run_agent_loop() with that
+    system prompt, a starting user message of customer_message,
+    tools=[GET_CLAIM_STATUS_TOOL], and handlers={"get_claim_status":
+    get_claim_status}. Return what run_agent_loop() returns.
     """
-    raise NotImplementedError
+    system_prompt = """
+        You are Claims Specialist for an insurance company.
+        You are empathetic and focused on providing claims statuses and next steps.
+        Use `get_claim_status` tool to look up the status, filed date, and next step for a claim by id.
+        If no claim id is provided, ask the user for it."""
+
+    return run_agent_loop(
+        system_prompt,
+        messages=[{"role": "user", "content": customer_message}],
+        tools=[GET_CLAIM_STATUS_TOOL],
+        handlers={"get_claim_status": get_claim_status},
+        #max_tokens=500
+    )
+
+
 
 
 # ---------- Policy Specialist ----------
@@ -106,29 +186,49 @@ SEARCH_POLICY_TOOL = {
 
 def search_policy(query: str) -> list:
     """
-    TODO 2: Simple keyword overlap retrieval over POLICY_CLAUSES (same
-    technique as Day 1's H1 lab). Return the top 2 matches as a list of
-    {id, title, text} dicts.
+    TODO 2: Keyword overlap retrieval over POLICY_CLAUSES using the provided
+    _tokenize() — same technique as Day 1's H1 lab. For each clause, tokenize
+    its title + text, score it by the size of the overlap with the
+    tokenized query, and return the top 2 scoring clauses (score > 0) as a
+    list of {id, title, text} dicts.
     """
-    raise NotImplementedError
+    q_tokens = set(_tokenize(query))
+    scored=[]
+    for c in POLICY_CLAUSES:
+        c_tokens = set(_tokenize(c['title'] + ' ' + c['text']))
+        score = len(q_tokens.intersection(c_tokens))
+        scored.append((score, c))
+        scored.sort(key=lambda x: x[0], reverse=True)
+    return [c for score, c in scored[:2] if score > 0] 
 
 
 def run_policy_specialist(customer_message: str) -> str:
     """
-    TODO 3: Implement the Policy Specialist's own tool-use loop:
-      - system prompt: precise, citation-oriented, must use search_policy
-        and answer ONLY from returned clauses, citing ids; say "I don't
-        have this information" if nothing relevant is found
-      - call the model with tools=[SEARCH_POLICY_TOOL], execute the tool
-        when called, feed results back, get final text reply
-    Return the specialist's final text reply (a string).
+    TODO 3: Write a system prompt for the Policy Specialist — precise,
+    citation-oriented, must use search_policy and answer ONLY from returned
+    clauses, citing ids (e.g. [POL-010]) for every factual claim, and should
+    say it doesn't have the information if nothing relevant is found. Then
+    call run_agent_loop() the same way as TODO 1, with
+    tools=[SEARCH_POLICY_TOOL] and handlers={"search_policy": search_policy}.
 
-    Same heads-up as TODO 1: this agent in particular tends to fire two
-    search_policy calls at once. Every tool_use block needs its own
-    tool_result. Factoring TODO 1 and TODO 3 into one shared loop helper is
-    the cleaner move.
+    Heads-up: this agent in particular tends to fire two search_policy calls
+    in one turn (parallel tool use) — run_agent_loop() already handles that,
+    which is the whole point of using it instead of hand-rolling the loop
+    again here.
     """
-    raise NotImplementedError
+    system_prompt = """
+        You are a Policy Specialist for an insurance company.
+        You are precise and citation-oriented, and must use `search_policy` to answer questions about policy clauses.
+        Answer ONLY from the returned clauses, citing ids (e.g. [POL-010]) for every factual claim.
+        If nothing relevant is found, say you don't have the information."""
+
+    return run_agent_loop(
+        system_prompt,
+        messages=[{"role": "user", "content": customer_message}],
+        tools=[SEARCH_POLICY_TOOL],
+        handlers={"search_policy": search_policy},
+        #max_tokens=500
+    )
 
 
 # ---------- Supervisor ----------
@@ -155,31 +255,42 @@ def execute_handoff(specialist: str, task: str) -> str:
     return "Unknown specialist."
 
 
+SUPERVISOR_SYSTEM = """
+You are a front-line Supervisor for an Insurance CX system.
+For claim status/filing questions -> hand off to the "claims" specialist.
+For coverage/policy wording questions -> hand off to the "policy" specialist.
+For greetings, thanks, or anything that does not require the expertise of the specialist, just respond directly yourself - NO HANDOFF unless required
+
+When you perform a hand-off, pass the customer's actual question as the task."""
+
+
 def run_supervisor(customer_message: str) -> str:
     """
-    TODO 4: Implement the Supervisor's loop:
-      - system prompt: decide whether this needs a specialist handoff
-        (claims or policy) or can be handled directly (e.g. greetings);
-        use the handoff tool when appropriate
-      - if the model calls handoff, execute_handoff() with the actual
-        customer_message as the task (or the model's task description —
-        your call), feed the specialist's reply back as the tool result,
-        and get a final supervisor reply that relays the answer to the
-        customer in a consistent voice
-      - if no handoff is called, just return the supervisor's direct reply
-    Return the supervisor's final text reply.
+    TODO 4b: Write the Supervisor's system prompt — decide whether this needs
+    a specialist handoff (claims or policy) or can be handled directly (e.g.
+    greetings, thanks), using the handoff tool when appropriate and relaying
+    the specialist's answer back to the customer in a consistent voice.
+
+    Assign it to the SUPERVISOR_SYSTEM constant above (not inline in this
+    function) — TODO 6 reuses the exact same prompt for agent-assist mode,
+    and a module-level constant means it can't drift out of sync between the
+    two call sites.
+
+    Then call run_agent_loop() with system=SUPERVISOR_SYSTEM,
+    tools=[HANDOFF_TOOL], and handlers={"handoff": execute_handoff}.
 
     The interesting case is the one with NO tool call. "Hi there!" must be
     answered directly — an agent that routes a greeting to the claims
     specialist is worse than the morning's classifier, which at least was
     fast. Say so explicitly in the system prompt; left to itself, a model
     holding a shiny tool will reach for it.
-
-    Beware `next(b.text for b in response.content if b.type == "text")` — a
-    bare next() with no default raises StopIteration when the turn contains
-    only thinking and tool_use blocks. Collect the text blocks instead.
     """
-    raise NotImplementedError
+    return run_agent_loop(
+        SUPERVISOR_SYSTEM,
+        [{"role": "user", "content": customer_message}],
+        [HANDOFF_TOOL],
+        {"handoff": execute_handoff}
+    )
 
 
 if __name__ == "__main__":
@@ -221,21 +332,48 @@ class AgentAssistPayload(BaseModel):
       - requires_human_approval: bool = True
     Give each a Field(description=...).
     """
-    pass
+    recommended_response: str = Field(description="Draft reply a human agent could send as-is or edit")
+    proposed_specialist: Optional[str] = Field(default=None, description="Which specialist was consulted if any were used in the Support.")
+    proposed_task: Optional[str] = Field(default=None, description="tasks passed to the specialist if any were used in the support")
+    required_human_approval: bool = Field(default=True, description="Always True - Nothing should reach the customer automatically")
 
 
 def run_supervisor_agent_assist(customer_message: str) -> AgentAssistPayload:
     """
-    TODO 6: Same routing logic as run_supervisor (TODO 4), but instead of
-    returning the final text directly:
+    TODO 6: Same routing as run_supervisor (TODO 4) — reuse the
+    SUPERVISOR_SYSTEM constant, don't rewrite the prompt — but you need to
+    know WHICH specialist(s) got consulted to fill in the payload, and
+    execute_handoff() itself only returns a string. Wrap it: define a local
+    record_handoff(specialist, task) that appends (specialist, task) to a
+    list and then calls execute_handoff(specialist, task), and pass
+    {"handoff": record_handoff} as the handlers dict instead of
+    execute_handoff directly.
+
+    Then:
       - if no handoff happened, return AgentAssistPayload(recommended_response=<text>)
       - if a handoff happened, return AgentAssistPayload with
         recommended_response=<final draft text>, proposed_specialist=<which
-        one>, proposed_task=<the task string that was used>
+        one(s)>, proposed_task=<the task string(s) used>
     Nothing should be printed to "the customer" — this function only ever
     returns a payload for a human to review.
     """
-    raise NotImplementedError
+    handoffs = []
+
+    def record_handoff(specialist, task: str) -> str:
+        handoffs.append((specialist, task))
+
+    draft = run_agent_loop(
+        SUPERVISOR_SYSTEM,
+        [{"role": "user", "content": customer_message}],
+        [HANDOFF_TOOL],
+        {"handoff": record_handoff}
+    )
+
+    return AgentAssistPayload(
+        recommended_response=draft, 
+        proposed_specialist="".join(s for s, _ in handoffs) or None,
+        proposed_task=" | ".join(t for _, t in handoffs) or None
+    )
 
 
 if __name__ == "__main__":

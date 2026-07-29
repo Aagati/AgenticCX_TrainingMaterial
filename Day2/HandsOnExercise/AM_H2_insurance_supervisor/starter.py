@@ -65,8 +65,27 @@ def classify_intent(message: str) -> str:
     the model from drifting into an explanation you'd then have to parse.
     Remember .strip().lower() — trailing whitespace and a capital C are the
     two things that will silently break your == comparison later.
+
+    We can also use a very cheap/lightweight model for this classification task,
+    since we don't need token expensive reasoning nor we need to generate long responses.
+    It's a simple 1 word in - 1 word out classification so a small model/cheap/open source model can
+    also be used, for example = "claude-haiku-4-5-20251001" (claude Haiku 4.5)
     """
-    raise NotImplementedError
+    response = client.messages.create(
+        model=MODEL,
+        max_tokens=10,
+        system=(
+            "Classify the following customer message as either 'claims' or 'policy'."
+            "'claims' (filing or checking the status of an insurance claim) or 'policy' (questions about coverage, clauses, or terms of the insurance policy)."
+            "(coverage/policy wording questions). Reply with ONLY one word: 'claims' or 'policy'."
+        ),
+        messages=[{"role": "user", "content": message}]
+    )
+    return _text(response).strip().lower()
+
+# model = 'claims', return = 'claims'
+# model = 'polic y', return = 'policy'
+# model = 'CLAIM S', return = 'claims'
 
 
 def claims_specialist_reply(message: str) -> str:
@@ -81,7 +100,24 @@ def claims_specialist_reply(message: str) -> str:
     Call Claude with this system prompt and the customer message, return
     the reply text.
     """
-    raise NotImplementedError
+    claims_context = json.dumps(DATA["claims"], indent=2)
+    system = f"""
+        You are a Claims Specialist. You have access to the following claims data:
+        You are empathetic and focused on providing claims statuses and next steps
+        Here is the claims data you have access to: {claims_context}
+
+        If asked a general policy coverage question, say that it is outside what you can handle.
+        and tell the user that you will REDIRECT them to the Policy team."""
+
+    response = client.messages.create(
+        model=MODEL,
+        max_tokens=300,
+        system=system,
+        messages=[{"role": "user", "content": message}]
+    )
+
+    return _text(response)
+
 
 
 def policy_specialist_reply(message: str) -> str:
@@ -100,7 +136,24 @@ def policy_specialist_reply(message: str) -> str:
     Assistance\\n<text>". If you ask for citations but don't put the ids in
     the context, the model will invent ones that look right.
     """
-    raise NotImplementedError
+    clauses_context = "\n\n".join(f"[{c['id']}] {c['title']}\n{c['text']}" for c in DATA["policy_clauses"])
+    system = f"""
+            You are a Policy Specialist. You have access to the following policy clauses data:
+            {clauses_context}
+            You are precise and citation-oriented, Answer ONLY using the policy clauses attached above.
+            citing the clause ID (ex. POL-001) for every factual claim, if the answer isnt in these clauses
+            SAY explicitly that you don't have such information rather than guessing or using your own internal knowledge.
+            If asked about claim statuses, SPECIFY it is outside of your scope and 
+            redirect the user to the Claims team."""
+
+    response = client.messages.create(
+        model=MODEL,
+        max_tokens=300,
+        system=system,
+        messages=[{"role": "user", "content": message}]
+    )
+
+    return _text(response)
 
 
 def route_and_respond(message: str):
@@ -116,7 +169,14 @@ def route_and_respond(message: str):
     neither word. Falling through to policy is defensible; falling over is
     not.
     """
-    raise NotImplementedError
+
+    intent = classify_intent(message)
+    if intent == "claims":
+        reply = claims_specialist_reply(message)
+        return "Claims Specialist: ", reply
+    elif intent == "policy":
+        reply = policy_specialist_reply(message)
+        return "Policy Specialist: ", reply
 
 
 if __name__ == "__main__":

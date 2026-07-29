@@ -25,6 +25,7 @@ the customer never learns the number changed.
 import json
 import os
 import sys
+import re
 from typing import Optional
 from datetime import datetime
 from pydantic import BaseModel, Field
@@ -74,7 +75,10 @@ class SlotExtraction(BaseModel):
     from a precise figure. You need to know which it was before you can tell a
     customer "you said around $90, the charge is $89.99" — see TODO 4b.
     """
-    pass
+    found: bool = Field(description="True if the customers message contains a value for this specific slot")
+    value: Optional[str] = Field(default=None, description="The raw value as stated, unvalidated")
+    approximate: bool = Field(default=False, description="True if the customer HEDGED the value ('around 90', 'about ten bucks', 'ninety-ish') rather than stating it")
+    
 
 
 EXTRACT_SLOT_TOOL = {
@@ -94,7 +98,37 @@ def validate_slot(slot: str, raw_value: str):
       - amount: must parse as a positive float -> return as float
       - reason: must be at least 5 characters (after stripping) -> return as string
     """
-    raise NotImplementedError
+    v = raw_value.strip()
+    if slot == "account_last4":
+        if len(v) == 4 and v.isdigit():
+            return True, v
+        else:
+            return False, "The account number must be exactly 4 digits."
+    elif slot == "transaction_date":
+        try:
+            datetime.strptime(v, "%Y-%m-%d")
+            return True, v
+        except ValueError:
+            return False, "The date must be in YYYY-MM-DD format."
+    elif slot == "amount":
+        amount = v.replace(",", "")
+        match = re.search(r"-?\d+(?:\.\d+)?", amount)
+        if match is None:
+            return False, "I couldn't read the entered amount as a number - please provide it in numerals, example: 45.00"
+        try:
+            amount = float(match.group())
+            if amount > 0:
+                return True, amount
+            else:
+                return False, "The amount must be a positive number."
+        except ValueError:
+            return False, "The amount must be a valid number."
+    elif slot == "reason":
+        if len(v) >= 5:
+            return True, v
+        else:
+            return False, "The reason must be at least 5 characters long."
+        
 
 
 def find_matching_transactions(slots: dict):
@@ -106,7 +140,10 @@ def find_matching_transactions(slots: dict):
     disambiguation is done on account+date only and then presented to the
     customer to confirm which one).
     """
-    raise NotImplementedError
+    return [
+        t for t in TRANSACTIONS if t["account_last4"] == slots["account_last4"] and t["date"] == slots["transaction_date"]
+    ]
+
 
 
 AMOUNT_TOLERANCE_RATIO = 0.10   # within 10% reads as ordinary mis-remembering
@@ -123,7 +160,8 @@ def amounts_agree(claimed: float, ledger: float) -> bool:
     or fraud. Those need different handling, so this returns a verdict the
     caller acts on rather than hiding a magic number inside an if-statement.
     """
-    raise NotImplementedError
+    tolerance = max(AMOUNT_TOLERANCE_FLOOR, claimed * AMOUNT_TOLERANCE_RATIO)
+    return abs(claimed - ledger) <= tolerance
 
 
 def reconcile_amount(claimed: float, approximate: bool, ledger: float):
@@ -152,7 +190,15 @@ def reconcile_amount(claimed: float, approximate: bool, ledger: float):
     ledger stale. Flag it for a human — that's the honest response to "I can't
     tell which of these two numbers is correct."
     """
-    raise NotImplementedError
+    gap = abs(claimed - ledger)
+    if gap < 0.01:
+        return None, False
+
+    hedge = "around" if approximate else ""
+    if amounts_agree(claimed, ledger):
+        return f"You mentioned {hedge} ${claimed:.2f}, but the ledger shows ${ledger:.2f}. We'll file against the ledger amount.", False
+    else:
+        return f"You mentioned {hedge} ${claimed:.2f}, but the ledger shows ${ledger:.2f}. The difference is ${gap:.2f}, which is larger than expected. We'll file against the ledger amount, but this has been flagged for review.", True
 
 
 def extract_slot_value(slot: str, customer_message: str) -> SlotExtraction:
@@ -168,7 +214,21 @@ def extract_slot_value(slot: str, customer_message: str) -> SlotExtraction:
     ('about', 'around', 'roughly', '-ish') instead of stating it exactly."
     A field the prompt never mentions just sits at its default.
     """
-    raise NotImplementedError
+    response = client.messages.create(
+        model=MODEL,
+        max_tokens=100,
+        system = (
+            f"""Extract only the value for the slot '{slot}' from the customer's message, if present. 
+            Set the approximate field to true when the customer hedges the value ('about', 'around', 'roughly', '-ish') instead of stating it exactly."""
+        ),
+        tools=[EXTRACT_SLOT_TOOL],
+        tool_choice={"type": "tool", "name": "submit_extraction"},
+        messages=[
+            {"role": "user", "content": customer_message}
+        ],
+    )
+    tool_call = next((block for block in response.content if block.type == "tool_use"))
+    return SlotExtraction(**tool_call.input)
 
 
 def run_flow():
@@ -195,35 +255,70 @@ def run_flow():
             #
             # Don't drop the hedge here — validate_slot() turns "around ninety"
             # into 90.0, so this line is the last place the uncertainty exists.
-            raise NotImplementedError
+            ok, result = validate_slot(slot, extraction.value)
+            if ok:
+                slots[slot] = result
+                hedged[slot] = extraction.approximate
+                filled = True
+            else:
+                print(f"AGENT: {result}")
+                attempts += 1
+        if not filled:
+            print("AGENT: Sorry, I couldn't get that information. Let me connect you to a specialist.")
+            return
 
-    # TODO 7: Once all slots are filled, call find_matching_transactions().
-    #
-    # a) RANK, don't filter. Sort the matches by how close each one is to
-    #    slots["amount"]. The claimed amount is too unreliable to exclude
-    #    candidates with, but it's a good way to put the likeliest one first.
-    #
-    # b) DISAMBIGUATION. If more than one match, list them (amount + merchant)
-    #    and ask the customer to pick one. If none of them are within
-    #    amounts_agree() of the claimed amount, say so — when nothing on that
-    #    date is close, the DATE is usually what's wrong, and telling them
-    #    beats letting them pick a transaction they don't recognize.
-    #
-    # c) RECONCILIATION. Before the summary, call reconcile_amount() with the
-    #    claimed amount, hedged["amount"], and the chosen transaction's amount.
-    #    Print the line it returns. This has to come BEFORE the confirmation,
-    #    not inside it — you are about to file a different number than the one
-    #    the customer gave you, and that swap gets named out loud.
-    #
-    # d) CONFIRMATION. Print a summary and ask for explicit yes/no before
-    #    "filing" (just print "Dispute filed." — no real backend). Keep BOTH
-    #    numbers visible in the summary when they differ: "customer claimed
-    #    ~$90, ledger shows $89.99" is evidence, and keeping only one of them
-    #    destroys it.
-    #
-    #    If reconcile_amount() returned needs_review=True, file anyway but say
-    #    it's been flagged for a specialist. Never block on the mismatch.
-    raise NotImplementedError
+    claimed = slots.get("amount")
+    hedged_amount = hedged.get("amount")
+    matches = find_matching_transactions(slots)
+    matches.sort(key=lambda t: abs(t["amount"] - claimed) if claimed is not None else float('inf'))
+
+    needs_review = False
+    if len(matches) == 0:
+        chosen = {"merchant": "(not found in our records)", "amount": slots["amount"]}
+    elif len(matches) == 1:
+        chosen = matches[0]
+    else:
+        print("AGENT: I found multiple transactions that match your account and date:")
+        for i, match in enumerate(matches, 1):
+            gap = abs(match["amount"] - claimed)
+            note = "" if gap < 0.01 else f"  ({'closest to' if amounts_agree(claimed, match['amount']) else 'differs from'} the ${claimed:.2f} you mentioned)"
+            print(f"{i}. Amount: ${match['amount']:.2f}, Merchant: {match['merchant']} {note}")
+        if not any(amounts_agree(claimed, m['amount']) for m in matches):
+            print(f"AGENT: Heads up — none of these are close to the "
+                  f"${claimed:.2f} you mentioned. If none look right, the "
+                  f"date might be off and we can search another day.")
+            needs_review = True
+        choice = input("YOU: ").strip()
+        try:
+            chosen = matches[int(choice) - 1]
+        except (ValueError, IndexError):
+            print("AGENT: I didn't catch a valid choice — let me connect you with a specialist.")
+            return
+
+    line, mismatch = reconcile_amount(claimed, hedged_amount, chosen["amount"])
+    if line:
+        print(f"\nAGENT: {line}")
+    needs_review = needs_review or mismatch
+
+    print("\nAGENT: Here's what I have —")
+    print(f"  Account ending {slots['account_last4']}, {slots['transaction_date']}, "
+      f"${chosen['amount']:.2f} at {chosen['merchant']}")
+    if abs(claimed - chosen["amount"]) >= 0.01:
+        # Both numbers survive into the record. "Customer claimed ~$90, ledger
+        # shows $89.99" is evidence; keeping only one of them destroys it.
+        hedge = "~" if hedged_amount else ""
+        print(f"  (you said {hedge}${claimed:.2f} — filing against the ${chosen['amount']:.2f} charge)")
+    print(f"  Reason: {slots['reason']}")
+    confirm = input("AGENT: Shall I file this dispute? (yes/no)\nYOU: ").strip().lower()
+    if confirm.startswith("y"):
+        print("AGENT: Dispute filed. You'll hear back within 5-7 business days.")
+        if needs_review:
+            # Not a block — the customer may be right and the ledger stale.
+            # The gap is flagged for a human instead of being averaged away.
+            print("AGENT: I've also flagged the amount difference for a specialist to double-check.")
+    else:
+        print("AGENT: No problem, I won't file it. Let me know if anything changes.")
+
 
 
 if __name__ == "__main__":

@@ -1,14 +1,18 @@
 """
 AM · H3 — Telecom Cross-Session Memory (REFERENCE SOLUTION)
 
-The memory layer is the lab. The recall check below is the part most people
-get wrong: an exact-substring test on generative output produces false
-failures whenever the agent paraphrases a stored fact, whenever the reply is
-cut off by max_tokens, and whenever the fact simply isn't relevant to what
-the customer asked. This grades in tiers — cheap deterministic checks first,
-an LLM judge only when those are inconclusive — and reserves a FAIL for a
-genuine memory failure: the agent re-asked for a fact, contradicted it, or
-ignored it when it clearly mattered.
+Maps to starter.py's TODOs:
+    TODO 1-4 (core)  -> save_fact, load_profile, extract_facts, chat
+    TODO 5-6 (BONUS) -> judge_recall, check_recall
+
+The memory layer (TODO 1-4) is the core lab. The BONUS recall check below is
+the part most people get wrong when they try it: an exact-substring test on
+generative output produces false failures whenever the agent paraphrases a
+stored fact, whenever the reply is cut off by max_tokens, and whenever the
+fact simply isn't relevant to what the customer asked. This grades in tiers
+— cheap deterministic checks first, an LLM judge only when those are
+inconclusive — and reserves a FAIL for a genuine memory failure: the agent
+re-asked for a fact, contradicted it, or ignored it when it clearly mattered.
 """
 
 import json
@@ -134,7 +138,11 @@ _FENCE_RE = re.compile(r"^```(?:json)?\s*|\s*```$", re.MULTILINE)
 
 
 def _parse_json_object(text: str) -> dict:
-    """Tolerate fences and stray prose around the JSON the model returns."""
+    """Tolerate fences and stray prose around the JSON the model returns.
+
+    Split out as a helper here for reuse; starter.py's TODO 3 asks candidates
+    to fold this same fence-stripping + regex-fallback logic inline into
+    extract_facts() rather than write it as a separate function."""
     cleaned = _FENCE_RE.sub("", text).strip()
     try:
         data = json.loads(cleaned)
@@ -190,7 +198,7 @@ def chat(customer_id: str, message: str) -> Reply:
 
 
 # --------------------------------------------------------------------------
-# Recall check
+# BONUS — Recall check (starter.py TODO 5: judge_recall, TODO 6: check_recall)
 # --------------------------------------------------------------------------
 
 _STOPWORDS = {"a", "an", "the", "with", "and", "or", "of", "for", "on", "in",

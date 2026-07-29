@@ -27,6 +27,21 @@ Run two separate "sessions" (just two separate calls to `chat()` in your
 and confirm the second session's system prompt already includes facts
 learned in the first, without the customer restating them.
 
+## Bonus (optional, untimed)
+Eyeballing the transcript to check recall doesn't scale. `starter.py` has
+two more TODOs, kept separate from the core 4 above:
+5. `judge_recall(key, value, question, reply)` — an LLM-as-judge fallback
+   call for anything a plain string match can't settle (paraphrase, omission,
+   irrelevance).
+6. `check_recall(key, value, question, reply)` — a tiered check: verbatim
+   match, then token-overlap match, then `judge_recall()` as the last
+   resort. Returns PASS/SKIP/FAIL/INCONCLUSIVE/INVALID, not just true/false —
+   resist writing `assert "Unlimited Plus" in reply`, since a paraphrase and
+   a truncated reply both fail that test for reasons that have nothing to do
+   with a real memory bug.
+
+Reference implementation: `solution.py`'s "BONUS — Recall check" section.
+
 ## Why this matters
 This is today's Topic 05 (persistent memory): cross-session memory is what
 lets "don't make the customer repeat themselves" hold true not just within

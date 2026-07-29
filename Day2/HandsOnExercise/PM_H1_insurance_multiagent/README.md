@@ -33,7 +33,7 @@ mechanics work if you later port it to LangGraph or the Claude Agent SDK —
 today's goal is to understand the mechanics, not memorize a specific
 framework's API).
 
-## Part 2 — Agent-assist mode (required — this is today's Topic 03, built)
+## Part 2 — Agent-assist mode (required — this is today's Topic 03)
 This morning's deck named "agent-assist mode" as a pattern: the agent drafts
 for a human to review instead of replying to the customer directly. Part 1
 never actually builds that — Part 2 does.
