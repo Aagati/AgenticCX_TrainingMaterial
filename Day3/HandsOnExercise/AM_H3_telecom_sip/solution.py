@@ -3,6 +3,9 @@ AM · H3 — Telecom SIP Call State Machine (REFERENCE SOLUTION)
 """
 
 from anthropic import Anthropic
+from dotenv import load_dotenv
+
+load_dotenv()
 
 client = Anthropic()
 MODEL = "claude-sonnet-5"

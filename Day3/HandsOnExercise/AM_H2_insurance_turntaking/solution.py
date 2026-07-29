@@ -3,8 +3,14 @@ AM · H2 — Insurance Turn-Taking / Endpointing Tuning (REFERENCE SOLUTION)
 """
 
 import json
+import os
 
-with open("test_calls.json") as f:
+# with open("test_calls.json") as f:
+#     TEST_CALLS = json.load(f)
+
+DATA_DIR = os.path.dirname(os.path.abspath(__file__))
+
+with open(os.path.join(DATA_DIR, "test_calls.json")) as f:
     TEST_CALLS = json.load(f)
 
 FILLER_ENDINGS = ("um", "uh", "so", "and", "on", "the", "to", "for", "of")
