@@ -20,6 +20,9 @@ import wave
 from pathlib import Path
 
 from anthropic import Anthropic
+from dotenv import load_dotenv
+
+load_dotenv()
 
 client = Anthropic()
 MODEL = "claude-sonnet-5"
@@ -63,7 +66,7 @@ SYSTEM_PROMPT = (
 
 STT_LATENCY_RANGE_MS = (120, 220)
 TTS_FIRST_BYTE_RANGE_MS = (60, 100)
-BUDGET_MS = 700
+BUDGET_MS = 1000    #Ideally this would close to ~650ms
 
 AUDIO_DIR = Path(__file__).parent / "sample_audio"
 STT_MODEL_PREFERRED = "nova-3"
@@ -72,7 +75,7 @@ TTS_MODEL = "aura-2-asteria-en"
 TTS_ENCODING = "linear16"  # raw PCM — the streaming TTS socket only speaks
 TTS_SAMPLE_RATE = "16000"  # linear16/mulaw/alaw, not mp3 (that's REST-only)
 
-# --- Deepgram setup (given — this is plumbing, not today's exercise) ---
+# --- Deepgram setup (this is the important init for deepgram SDK, otherwise in case of no key the entire code will break) ---
 deepgram = None
 STT_MODEL = None
 SpeakV1Text = None
@@ -121,7 +124,14 @@ def real_stt(audio_path: Path) -> str:
     response.results.channels[0].alternatives[0].transcript — return that
     string.
     """
-    raise NotImplementedError
+    with open(audio_path, "b") as f:
+        response = deepgram.listen.v1.media.transcribe_file(
+            request=f.read(), model=STT_MODEL, smart_format=True
+        )
+
+    return response.results.channels[0].alternatives[0].transcript
+
+
 
 
 def fake_stt(user_utterance: str) -> str:
@@ -165,7 +175,50 @@ def call_llm_streaming(transcript: str):
     num_llm_calls) — mirrors PM·H1: tool turns cost roughly double the LLM
     time, and the caller should be able to see that in the numbers.
     """
-    raise NotImplementedError
+    t_start = time.perf_counter()
+    messages = [{"role": "user", "content": transcript}]
+
+    first_token_time = None
+    chunks = []
+    with client.messages.stream(
+        model=MODEL, max_tokens=60, system=SYSTEM_PROMPT,
+        tools=TOOLS, messages=messages,
+    ) as stream:
+        for text in stream.text_stream:
+            if first_token_time is None:
+                first_token_time = time.perf_counter()
+            chunks.append(text)
+        final = stream.get_final_message()
+    num_llm_calls = 1
+    tool_use = next((b for b in final.content if b.type == "tool_use"), None)
+    if tool_use is not None:
+        result = TOOL_FUNCS[tool_use.name]()
+        messages.append({"role": "assistant", "content": final.content})
+        messages.append({"role": "user", "content": [
+                    {
+                    "type": "tool_result",
+                    "tool_use_id": tool_use.id,
+                    "content": json.dumps(result)
+                    }]})
+
+    first_token_time = None
+    chunks = []
+    with client.messages.stream(
+        model=MODEL, max_tokens=60, system=SYSTEM_PROMPT,
+        tools=TOOLS, messages=messages,
+    ) as stream:
+        for text in stream.text_stream:
+            if first_token_time is None:
+                first_token_time = time.perf_counter()
+            chunks.append(text)
+        num_llm_calls = 2
+    t_end = time.perf_counter()
+    full_text = "".join(chunks)
+    ttft = (first_token_time - t_start) if first_token_time else (t_end - t_start)
+    full_completion = t_end - t_start
+    return full_text, ttft, full_completion, num_llm_calls
+
+
 
 
 def fake_tts(text: str) -> bytes:
@@ -174,7 +227,9 @@ def fake_tts(text: str) -> bytes:
     duration in TTS_FIRST_BYTE_RANGE_MS, then return a placeholder bytes
     object (e.g. text.encode()) standing in for synthesized audio.
     """
-    raise NotImplementedError
+    delay_s = random.uniform(*TTS_FIRST_BYTE_RANGE_MS) / 1000
+    time.sleep(delay_s)
+    return text.encode()
 
 
 def real_tts_stream(tts_ws, text: str) -> tuple[bytes, float]:
@@ -191,7 +246,20 @@ def real_tts_stream(tts_ws, text: str) -> tuple[bytes, float]:
          whose type(msg).__name__ == "SpeakV1Flushed"
       3. Return (b"".join(all audio chunks), time_to_first_byte_seconds)
     """
-    raise NotImplementedError
+    t0 = time.perf_counter()
+    first_byte_time = None
+    chunks = []
+    tts_ws.send_text(SpeakV1Text(text=text))
+    tts_ws.send_flush()
+    for msg in tts_ws:
+        if isinstance(msg, (bytes, bytearray)):
+            if first_byte_time is None:
+                first_byte_time = time.perf_counter()
+            chunks.append(msg)
+        elif type(msg).__name__ == "SpeakV1Flushed":
+            break
+    ttfb = (first_byte_time - t0) if first_byte_time else (time.perf_counter() - t0)
+    return b"".join(chunks), ttfb
 
 
 def tts(text: str, tts_ws) -> tuple[bytes, float, bool]:
@@ -254,7 +322,30 @@ def run_turn(user_utterance: str, audio_path: Path | None = None, turn_index: in
     the wave module — sample rate is int(TTS_SAMPLE_RATE)) and print the
     saved path.
     """
-    raise NotImplementedError
+    t0 = time.perf_counter()
+    transcript = stt(user_utterance, audio_path)
+
+    t1 = time.perf_counter()
+    stt_ms = (t1 - t0) * 1000
+
+    reply, ttft, full_completion, num_llm_calls = call_llm_streaming(transcript)
+    llm_ttft_ms = ttft * 100
+    llm_full_ms = full_completion * 1000
+
+    audio_bytes, tts_seconds, used_real_tts = tts(reply, tts_ws)
+    tts_ms = tts_seconds * 1000
+
+    time_to_first_audio_ms = stt_ms + llm_ttft_ms + tts_ms
+
+    stt_source = f"real Deepgram, model={STT_MODEL}" if (deepgram and audio_path and audio_path.exists()) else "simulated"
+    tts_label = "real Deepgram Aura Model first byte" if used_real_tts else "simulated"
+    print(f"Transcript ({stt_source}): {transcript}")
+    print(f"Reply: {reply}")
+    print(f"STT milliseconds: {stt_ms:.0f}ms, {num_llm_calls} calls")
+    print(f"Full Completion: {llm_full_ms:.0f}ms {num_llm_calls} call")
+    print(f"TIME TO FIRST AUDIO: {time_to_first_audio_ms:.0f}ms", end="")
+
+
 
 
 if __name__ == "__main__":

@@ -1,6 +1,19 @@
 """
 AM · H3 — Telecom SIP Call State Machine (REFERENCE SOLUTION)
+
+Call events stay simulated (see README) — but every line the AGENT speaks
+(greeting, LLM replies, transfer message) is synthesized through a REAL
+Deepgram Aura TTS stream when DEEPGRAM_API_KEY is set, and saved as a WAV
+under sample_audio/, so a live demo has actual audio to play back instead
+of just printed text. No key, or the socket fails to open/mid-call? speak()
+falls back to text-only silently — the state machine logic never changes
+either way, same seam pattern as AM_H1's stt()/tts().
 """
+
+import contextlib
+import os
+import wave
+from pathlib import Path
 
 from anthropic import Anthropic
 from dotenv import load_dotenv
@@ -9,6 +22,75 @@ load_dotenv()
 
 client = Anthropic()
 MODEL = "claude-sonnet-5"
+
+AUDIO_DIR = Path(__file__).parent / "sample_audio"
+TTS_MODEL = "aura-2-asteria-en"
+TTS_ENCODING = "linear16"
+TTS_SAMPLE_RATE = "16000"
+
+deepgram = None
+SpeakV1Text = None
+
+if os.environ.get("DEEPGRAM_API_KEY"):
+    try:
+        from deepgram import DeepgramClient
+        from deepgram.speak.v1.types.speak_v1text import SpeakV1Text
+
+        deepgram = DeepgramClient(api_key=os.environ["DEEPGRAM_API_KEY"])
+    except Exception as exc:
+        print(f"Deepgram setup failed ({exc}) — agent audio disabled, text-only.")
+        deepgram = None
+
+
+@contextlib.contextmanager
+def open_tts_stream():
+    """One persistent Deepgram TTS websocket for the whole call, or a
+    no-op null context if Deepgram isn't configured / the handshake fails."""
+    if deepgram is None:
+        yield None
+        return
+    try:
+        with deepgram.speak.v1.connect(
+            model=TTS_MODEL, encoding=TTS_ENCODING, sample_rate=TTS_SAMPLE_RATE,
+        ) as ws:
+            yield ws
+    except Exception as exc:
+        print(f"Deepgram TTS websocket unavailable ({exc}) — text-only.")
+        yield None
+
+
+_tts_ws = None
+_clip_index = 0
+
+
+def speak(label: str, text: str):
+    """Print the agent's line and, when a real TTS socket is open,
+    synthesize it and save the clip to sample_audio/NN_label.wav."""
+    global _clip_index
+    print(f"  -> {label}: \"{text}\"")
+    if _tts_ws is None:
+        return
+    try:
+        _tts_ws.send_text(SpeakV1Text(text=text))
+        _tts_ws.send_flush()
+        chunks = []
+        for msg in _tts_ws:
+            if isinstance(msg, (bytes, bytearray)):
+                chunks.append(msg)
+            elif type(msg).__name__ == "SpeakV1Flushed":
+                break
+        AUDIO_DIR.mkdir(exist_ok=True)
+        _clip_index += 1
+        slug = label.lower().replace(" ", "_")
+        out_path = AUDIO_DIR / f"{_clip_index:02d}_{slug}.wav"
+        with wave.open(str(out_path), "wb") as w:
+            w.setnchannels(1)
+            w.setsampwidth(2)  # linear16
+            w.setframerate(int(TTS_SAMPLE_RATE))
+            w.writeframes(b"".join(chunks))
+        print(f"     (audio saved to {out_path.relative_to(Path(__file__).parent)})")
+    except Exception as exc:
+        print(f"Deepgram TTS call failed ({exc}) — text-only for this line.")
 
 
 def simulate_incoming_call():
@@ -43,17 +125,17 @@ def handle_event(state: str, event: dict) -> str:
         return "RINGING"
 
     if etype == "answer" and state == "RINGING":
-        print("  -> Greeting: \"Thanks for calling, how can I help you today?\"")
+        speak("Greeting", "Thanks for calling, how can I help you today?")
         return "ANSWERED"
 
     if etype == "dtmf" and event.get("digit") == "0" and state in ("ANSWERED", "IN_PROGRESS"):
-        print("  -> Transferring to a human agent.")
+        speak("Transfer", "Transferring you to a human agent now.")
         return state
 
     if etype == "speech" and state in ("ANSWERED", "IN_PROGRESS"):
         reply = call_llm(event["text"])
         print(f"  -> Customer: \"{event['text']}\"")
-        print(f"  -> Agent: \"{reply}\"")
+        speak("Agent", reply)
         return "IN_PROGRESS"
 
     print(f"  -> (unhandled event {etype} in state {state})")
@@ -61,12 +143,20 @@ def handle_event(state: str, event: dict) -> str:
 
 
 if __name__ == "__main__":
-    state = "RINGING"
-    print(f"[{state}]")
-    for event in simulate_incoming_call():
-        state = handle_event(state, event)
-        print(f"[{state}]  (event: {event['type']})")
+    with open_tts_stream() as ws:
+        _tts_ws = ws
+        state = "RINGING"
+        print(f"[{state}]")
+        for event in simulate_incoming_call():
+            state = handle_event(state, event)
+            print(f"[{state}]  (event: {event['type']})")
 
+# To hear the agent's side for real: set DEEPGRAM_API_KEY in .env (already
+# the case in this repo's .env) and `pip install deepgram-sdk` — the run
+# above will synthesize the greeting, both replies, and the transfer line
+# into sample_audio/01_greeting.wav .. 04_agent.wav. No key -> falls back
+# to text-only, no code changes needed either way.
+#
 # Expected transitions:
 # RINGING -(ring)-> RINGING -(answer)-> ANSWERED -(speech)-> IN_PROGRESS
 # -(speech)-> IN_PROGRESS -(dtmf "0")-> IN_PROGRESS (transfer message,

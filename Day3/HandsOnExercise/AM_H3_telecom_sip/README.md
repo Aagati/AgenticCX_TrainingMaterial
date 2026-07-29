@@ -11,6 +11,14 @@ webhooks or an event stream. **The state machine you build today is
 exactly what sits behind that event stream in production** — only the
 event source is a Python generator instead of a real phone network.
 
+Call events (including "customer speech") stay simulated either way — but
+for a live demo, everything the AGENT says (greeting, LLM replies, the
+transfer line) is synthesized through a **real Deepgram Aura TTS stream**
+when `DEEPGRAM_API_KEY` is set, via the given `speak(label, text)` helper,
+and saved as WAVs under `sample_audio/`. No key? `speak()` falls back to
+text-only, silently — your `handle_event()` logic never needs to branch on
+which path it's on, same seam pattern as AM·H1's `stt()`/`tts()`.
+
 ## Scenario
 Bridging a voice agent to an actual phone number means handling a very
 different lifecycle than a web chat: calls ring, get answered (or not),
@@ -46,12 +54,20 @@ just a "handle the next thing that happens" script.
 ## Files
 - `starter.py` — scaffold with TODOs, includes `simulate_incoming_call()`.
 - `solution.py` — reference solution.
+- `sample_audio/` — generated at runtime; real Deepgram TTS clips of the
+  agent's lines (greeting, replies, transfer message) when a Deepgram key
+  is set. Empty / absent otherwise — nothing to commit, nothing required.
 
 ## Setup
 ```bash
 pip install anthropic
 export ANTHROPIC_API_KEY=sk-...
 python starter.py
+```
+Optional, for real agent-side audio instead of text-only:
+```bash
+pip install deepgram-sdk
+export DEEPGRAM_API_KEY=...
 ```
 
 ## Stretch goals
