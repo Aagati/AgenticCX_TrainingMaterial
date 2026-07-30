@@ -10,6 +10,9 @@ import json
 import re
 from datetime import datetime, timezone
 from anthropic import Anthropic
+from dotenv import load_dotenv
+
+load_dotenv()
 
 client = Anthropic()
 MODEL = "claude-sonnet-5"

@@ -5,6 +5,9 @@ AM · H2 — Insurance Guardrails + Prompt-Injection Defence (REFERENCE SOLUTION
 import json
 import re
 from anthropic import Anthropic
+from dotenv import load_dotenv
+
+load_dotenv()
 
 client = Anthropic()
 MODEL = "claude-sonnet-5"

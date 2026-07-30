@@ -4,6 +4,9 @@ AM · H3 — Retail Per-User Permissions (REFERENCE SOLUTION)
 
 import json
 from anthropic import Anthropic
+from dotenv import load_dotenv
+
+load_dotenv()
 
 client = Anthropic()
 MODEL = "claude-sonnet-5"

@@ -5,6 +5,9 @@ PM · H1 — Banking Idempotent, Audited Transactional Action (REFERENCE SOLUTIO
 import json
 from datetime import datetime, timezone
 from anthropic import Anthropic
+from dotenv import load_dotenv
+
+load_dotenv()
 
 client = Anthropic()
 MODEL = "claude-sonnet-5"

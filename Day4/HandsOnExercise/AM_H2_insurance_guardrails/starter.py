@@ -8,6 +8,9 @@ API key. Part 2 (protected_reply and the attack demo) needs one.
 import json
 import re
 from anthropic import Anthropic
+from dotenv import load_dotenv
+
+load_dotenv()
 
 client = Anthropic()
 MODEL = "claude-sonnet-5"
