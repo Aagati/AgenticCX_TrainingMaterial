@@ -43,7 +43,12 @@ def create_ticket(subject: str, description: str, priority: str) -> dict:
     # store a dict with subject, description, priority, status="open",
     # resolution_note=None in TICKET_STORE[ticket_id], and return
     # {"ticket_id": ticket_id, "status": "open"}.
-    raise NotImplementedError
+    ticket_id = f"TCK-{uuid.uuid4().hex[:6].upper()}" 
+    TICKET_STORE[ticket_id] = {
+            "subject": subject, "description": description, "priority": priority, "status": "open",
+            "resolution_note": None}
+    log(f"create_ticket called -> {ticket_id} ({priority})")
+    return {"ticket_id": ticket_id, "status": open}
 
 
 @mcp.tool()
@@ -57,7 +62,16 @@ def resolve_ticket(ticket_id: str, resolution_note: str) -> dict:
     # TODO 2: If ticket_id not in TICKET_STORE, return {"error": "ticket not found"}.
     # Otherwise set status="resolved" and resolution_note, then return
     # {"ticket_id": ticket_id, "status": "resolved"}.
-    raise NotImplementedError
+  
+    if ticket_id not in TICKET_STORE:
+        log(f"resolve_ticket tool called => {ticket_id} NOT FOUND")
+        return {"error": "ticket not found"}
+
+    TICKET_STORE[ticket_id]["status"] = "resolved"
+    TICKET_STORE[ticket_id]["resolution_note"] = resolution_note
+    log(f"resolve_ticket tool called => {ticket_id} resolved")
+    return {"ticket_id": ticket_id, "status": "resolved"}
+
 
 
 if __name__ == "__main__":

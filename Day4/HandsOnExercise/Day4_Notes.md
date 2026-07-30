@@ -85,25 +85,26 @@ Run from repo root: `.venv/Scripts/python.exe Day4_Labs/<lab>/solution.py`
 ---
 
 ## PM·H1 — Banking: Idempotent, Audited Transactional Action via MCP
-`Day4_Labs/PM_H1_banking_idempotent_action/` · idempotency keys + append-only audit logging around money-moving action
+`Day4_Labs/PM_H1_banking_idempotent_action/` · two parts, same AM_H1 MCP shape — idempotency keys + append-only audit logging live SERVER-side around a money-moving action
 
 **Structure**
-- `PROCESSED_KEYS` dict: `idempotency_key → stored result`. `process_refund()` checks this FIRST — key seen → return the IDENTICAL stored result without touching `REFUND_LEDGER` again.
-- `audit_log()` — appends structured dict to module-level `AUDIT_LOG`, called on EVERY path inside `process_refund` (fresh AND replay), with a distinct action name `"process_refund_replay"` for the replay case — replay is invisible to the ledger/customer but NOT invisible to audit.
-- Demo manually re-calls `process_refund()` directly with the SAME stored key, simulating a network-layer retry — not another model turn.
+- Part A (`server_starter.py`/`server_solution.py`) — `process_refund` is an `@mcp.tool()` on its own stdio server, same shape as `AM_H1a`. `PROCESSED_KEYS` dict: `idempotency_key → stored result`, lives in the SERVER process. `process_refund()` checks this FIRST — key seen → return the IDENTICAL stored result without touching `REFUND_LEDGER` again. `audit_log()` appends to module-level `AUDIT_LOG`, called on EVERY path (fresh AND replay), with a distinct action name `"process_refund_replay"` for the replay case. `get_ledger()`/`get_audit_log()` are two more given tools so Part B can read this state without importing the module — it's a different process, it has to ask over the protocol.
+- Part B (`client_starter.py`/`client_solution.py`) — spawn/discover/call_tool mechanics are given (already graded in `AM_H1b`); the one TODO is simulating a network retry by calling `session.call_tool("process_refund", used_args)` a SECOND time, directly, bypassing the model, with the exact same idempotency_key the model used on turn 1.
+- This is a corrected version of an earlier draft that put `PROCESSED_KEYS`/`AUDIT_LOG` in the AGENT process — same anti-pattern AM_H1 used to have before ITS restructure, and the wrong place for idempotency by the curriculum's own logic (AppliedLabs' companion notes: a retry re-invokes the external system, not whichever agent process happened to be running).
 
 **Test matrix**
 
 | # | Call | Expected |
 |---|---|---|
-| 1 | Model turn: "I was double-charged $45 for order #8821, please refund the duplicate charge." | `process_refund` called with a fresh model-generated `idempotency_key`; `REFUND_LEDGER` gets exactly 1 entry; `AUDIT_LOG` gets 1 entry (`process_refund`) |
-| 2 | Direct retry: `process_refund(same transaction_id, same amount, SAME idempotency_key)` | `REFUND_LEDGER` STILL has exactly 1 entry (not double-processed); `AUDIT_LOG` now has 2 entries total — the 2nd is `process_refund_replay`, same result payload as the original |
+| 1 | Model turn: "I was double-charged $45 for order #8821, please refund the duplicate charge." | `process_refund` called over MCP with a fresh model-generated `idempotency_key`; server's `REFUND_LEDGER` gets exactly 1 entry; `AUDIT_LOG` gets 1 entry (`process_refund`) |
+| 2 | Direct retry: client calls `session.call_tool("process_refund", same args)` again | `REFUND_LEDGER` (fetched via `get_ledger()`) STILL has exactly 1 entry (not double-processed); `AUDIT_LOG` (fetched via `get_audit_log()`) now has 2 entries total — the 2nd is `process_refund_replay`, same result payload as the original |
 
 **Edge cases to cover**
 - Retry with the SAME `transaction_id`/`amount` but a DIFFERENT (freshly generated) `idempotency_key` — this is NOT deduplicated (by design — the key IS the dedup mechanism) — confirm this produces a SECOND ledger entry, and discuss why that's the exact risk the README's discussion prompt raises about letting the model generate a fresh key on every retry.
 - Add the `max_amount` guardrail (stretch goal) — refuse any amount above a threshold in `process_refund` itself, regardless of what the model requests, and audit-log the refusal too. Not implemented; direct extension of AM·H3's code-level-gate pattern applied to a dollar amount instead of ownership.
-- Replayable audit narrative (stretch goal) — a function that takes `AUDIT_LOG` and reconstructs a human-readable step-by-step account. Not implemented here; PM·H2 builds exactly this (`replay_audit_trail`) for a different pipeline — worth pointing out the two are the same pattern.
-- Two DIFFERENT customers' refunds interleaved in the same run — confirm `PROCESSED_KEYS` (global, not scoped per customer) never cross-matches one customer's idempotency key against another's request.
+- Replayable audit narrative (stretch goal) — a function that takes `get_audit_log()`'s output and reconstructs a human-readable step-by-step account. Not implemented here; PM·H2 builds exactly this (`replay_audit_trail`) for a different pipeline — worth pointing out the two are the same pattern.
+- Two DIFFERENT customers' refunds interleaved in the same run — confirm `PROCESSED_KEYS` (global on the server, not scoped per customer) never cross-matches one customer's idempotency key against another's request.
+- FastMCP serializes a returned `list[dict]` as one content block PER list item, not one block holding a JSON array — `mcp_text()` in the client joins blocks with `"\n"` for exactly this reason; joining with `""` prints multi-entry results (like `get_audit_log()` with 2+ entries) as one unreadable concatenated blob. Worth a live "watch this go wrong" if you drop the separator.
 
 ---
 

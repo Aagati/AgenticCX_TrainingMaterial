@@ -48,7 +48,11 @@ def mcp_tool_to_anthropic_schema(mcp_tool) -> dict:
     # TODO 1: Return {"name": mcp_tool.name, "description": mcp_tool.description
     # or "", "input_schema": mcp_tool.inputSchema} — mapping the mcp SDK's tool
     # object onto the dict shape Anthropic's `tools=[...]` expects.
-    raise NotImplementedError
+    return {
+        "name": mcp_tool.name,
+        "description": mcp_tool.description or "",
+        "input_schema": mcp_tool.inputSchema
+    }  ## EARLIER TOOLS SCHEMA
 
 
 async def run_turn(session: ClientSession, tools: list, messages: list) -> list:
@@ -67,7 +71,10 @@ async def run_turn(session: ClientSession, tools: list, messages: list) -> list:
     # transport. Call `await session.call_tool(tool_use.name, tool_use.input)`,
     # then join the `.text` of every block in the result's `.content` list
     # (skip blocks without a `.text` attr) into `result_text`.
-    raise NotImplementedError
+    mcp_result = await session.call_tool(tool_use.name, tool_use.input)
+    result_text = "".join(
+        block.text for block in mcp_result.content if hasattr(block, "text")
+    )
 
     messages.append({"role": "assistant", "content": response.content})
     messages.append({"role": "user", "content": [
@@ -89,7 +96,13 @@ async def main():
     # as (read, write):` followed by `async with ClientSession(read, write) as
     # session:` and `await session.initialize()`. Everything below runs inside
     # that nested session.
-    raise NotImplementedError
+    server_params = StdioServerParameters(
+        command=sys.executable, args=[str(SERVER_SCRIPT)]
+    )
+
+    async with stdio_client(server_params) as (read, write):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
 
     mcp_tools = (await session.list_tools()).tools
     tools = [mcp_tool_to_anthropic_schema(t) for t in mcp_tools]

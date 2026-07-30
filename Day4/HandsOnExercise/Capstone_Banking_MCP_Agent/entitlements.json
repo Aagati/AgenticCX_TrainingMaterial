@@ -1,0 +1,10 @@
+{
+  "user_101": {
+    "owns_accounts": ["ACC-9001", "ACC-9002"],
+    "can_dispute_transaction": true
+  },
+  "user_202": {
+    "owns_accounts": ["ACC-9003"],
+    "can_dispute_transaction": false
+  }
+}
