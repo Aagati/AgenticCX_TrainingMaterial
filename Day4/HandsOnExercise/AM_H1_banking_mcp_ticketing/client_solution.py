@@ -1,20 +1,20 @@
 """
-AM · H1 — Banking: MCP Ticketing Integration (REAL MCP CLIENT VARIANT)
+AM · H1b — Banking: Use an MCP Server (REFERENCE SOLUTION)
 
-solution.py calls create_ticket/resolve_ticket as plain local Python
-functions passed straight into Anthropic's `tools=[...]`. This file is the
-same conversation loop, but the tools live in a separate process
-(mcp_ticket_server.py) and are called over the real MCP protocol: this
-process spawns the server over stdio, discovers its tools via
-session.list_tools() (no hardcoded schema — the server is the only source
-of truth), and executes them via session.call_tool(). Delete
-mcp_ticket_server.py's docstring's promise and this is exactly "swap in a
-real MCP server later" made real.
+An agent tool-use loop where the tools don't live in this process — they
+live in a separate process (server_solution.py) and are called over the
+real MCP protocol: this process spawns the server over stdio, discovers
+its tools via session.list_tools() (no hardcoded schema — the server is
+the only source of truth), and executes them via session.call_tool().
+This is "swap in a real MCP server later" made real: any MCP-compatible
+agent could point at that same server process without custom integration
+code, because the wire protocol — not a shared Python import — is the
+contract.
 
 Setup:
     pip install mcp
     Uses ANTHROPIC_API_KEY (already in .env) — no new key needed.
-    Just run this file directly; it launches mcp_ticket_server.py itself.
+    Just run this file directly; it launches server_solution.py itself.
 """
 
 import asyncio
@@ -23,11 +23,14 @@ import sys
 from pathlib import Path
 
 from anthropic import Anthropic
+from dotenv import load_dotenv
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
 if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
+load_dotenv()
 
 client = Anthropic()
 MODEL = "claude-sonnet-5"
@@ -38,7 +41,7 @@ description, and appropriate priority. Tell the customer their ticket
 number. If a later message confirms the issue is resolved, use
 resolve_ticket with a brief resolution note."""
 
-SERVER_SCRIPT = Path(__file__).parent / "mcp_ticket_server.py"
+SERVER_SCRIPT = Path(__file__).parent / "server_solution.py"
 
 
 def mcp_tool_to_anthropic_schema(mcp_tool) -> dict:
@@ -111,10 +114,9 @@ async def main():
 if __name__ == "__main__":
     asyncio.run(main())
 
-# Expected: identical conversation outcome to solution.py (ticket created,
-# then resolved) — but `tools` here was never hand-written, it came from
-# session.list_tools() talking to a separate OS process over stdio. Kill
-# mcp_ticket_server.py's process independently, point this client at a
-# different MCP server, or run the server standalone under any other
-# MCP-compatible agent — none of that is possible with solution.py's
-# in-process TOOL_FUNCS dict.
+# Expected: ticket created, then resolved — but `tools` here was never
+# hand-written, it came from session.list_tools() talking to a separate OS
+# process over stdio. Kill server_solution.py's process independently,
+# point this client at a different MCP server, or run the server
+# standalone under any other MCP-compatible agent — none of that is
+# possible if the tools were plain in-process Python functions.

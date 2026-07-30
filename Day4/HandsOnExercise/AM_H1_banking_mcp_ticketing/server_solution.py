@@ -1,12 +1,10 @@
 """
-AM · H1 — Banking: MCP Ticketing Integration (REAL MCP SERVER)
+AM · H1a — Banking: Build an MCP Server (REFERENCE SOLUTION)
 
-solution.py's README says outright: "no real Zendesk/ServiceNow instance or
-MCP server wired up... MCP adds a standard transport and discovery protocol
-on top of this same shape." This file IS that server — a real MCP server
-(stdio transport, via the official `mcp` Python SDK's FastMCP) exposing
-create_ticket / resolve_ticket as MCP tools. Run it standalone to inspect,
-or let solution_real_mcp.py spawn it as a subprocess.
+A real MCP server (stdio transport, via the official `mcp` Python SDK's
+FastMCP) exposing create_ticket / resolve_ticket as MCP tools. Run it
+standalone to inspect, or let client_starter.py/client_solution.py spawn
+it as a subprocess.
 
 Setup:
     pip install mcp
@@ -14,7 +12,7 @@ Setup:
     serves tools over the MCP protocol.
 
 Run directly (for manual inspection with an MCP-compatible client/inspector):
-    python mcp_ticket_server.py
+    python server_solution.py
 """
 
 import uuid
@@ -60,9 +58,9 @@ def resolve_ticket(ticket_id: str, resolution_note: str) -> dict:
 if __name__ == "__main__":
     mcp.run(transport="stdio")
 
-# Compare to solution.py: create_ticket/resolve_ticket are the exact same
-# functions, just registered with @mcp.tool() instead of a hand-written
-# CREATE_TICKET_TOOL/RESOLVE_TICKET_TOOL JSON schema dict — FastMCP derives
-# the schema from the type hints and docstring. Any MCP-compatible client
-# (this repo's solution_real_mcp.py, or Claude Desktop, or any other agent)
-# can now discover and call these tools without knowing this file exists.
+# Notice create_ticket/resolve_ticket are registered with @mcp.tool()
+# instead of a hand-written CREATE_TICKET_TOOL/RESOLVE_TICKET_TOOL JSON
+# schema dict — FastMCP derives the schema from the type hints and
+# docstring. Any MCP-compatible client (this repo's client_starter.py, or
+# Claude Desktop, or any other agent) can now discover and call these
+# tools without knowing this file exists.

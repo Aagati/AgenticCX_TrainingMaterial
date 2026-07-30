@@ -12,26 +12,27 @@ Run from repo root: `.venv/Scripts/python.exe Day4_Labs/<lab>/solution.py`
 ---
 
 ## AM·H1 — Banking: Connect the Agent to a Ticketing System via MCP
-`Day4_Labs/AM_H1_banking_mcp_ticketing/` · typed tools, create → resolve lifecycle
+`Day4_Labs/AM_H1_banking_mcp_ticketing/` · two parts — build a real MCP server, then build the client that consumes it
 
 **Structure**
-- `CREATE_TICKET_TOOL` — `priority` constrained via JSON schema `"enum": ["low","medium","high"]`; model physically cannot submit a 4th value.
-- `TICKET_STORE` — plain dict keyed by generated `ticket_id` (`uuid4().hex[:6]`).
-- `run_turn()` — identical shape to every earlier tool loop (Day1 H2/H3, Day2 PM·H1): `next()` tool_use check → execute → one followup call.
+- Part A (`server_starter.py`/`server_solution.py`) — `create_ticket`/`resolve_ticket` registered as `@mcp.tool()` on a `FastMCP` server, stdio transport, its own OS process. `TICKET_STORE` is a plain dict keyed by generated `ticket_id` (`uuid4().hex[:6]`). Schema is derived by FastMCP from type hints + docstring, not a hand-written JSON `enum` dict.
+- Part B (`client_starter.py`/`client_solution.py`) — spawns Part A's server as a subprocess (`StdioServerParameters` + `stdio_client`), discovers its tools via `session.list_tools()` (no hardcoded schema on the client side), executes via `session.call_tool()`. `run_turn()` is otherwise the same shape as every earlier tool loop (Day1 H2/H3, Day2 PM·H1): `next()` tool_use check → execute → one followup call — the only new mechanic is that "execute" now crosses a process boundary.
 - Two-turn demo: create then resolve, same `ticket_id` recalled by the MODEL from its own conversation memory (not passed back explicitly by code).
+- `client_starter.py` spawns `server_starter.py` (chains onto the trainee's own Part A work); `client_solution.py` spawns `server_solution.py` instead, so it's a reliable standalone reference independent of Part A's state.
 
 **Test matrix**
 
 | # | Turn | Input | Expected |
 |---|---|---|---|
-| 1 | 1 | "My transfer to my landlord failed and the money hasn't come back yet." | `create_ticket` called with sensible subject/description/priority; customer told their ticket number; `TICKET_STORE[id].status == "open"` |
+| 1 | 1 | "My transfer to my landlord failed and the money hasn't come back yet." | `create_ticket` called with sensible subject/description/priority; customer told their ticket number; server's `TICKET_STORE[id].status == "open"` |
 | 2 | 2 | "Update — the money just came back on its own, you can close it out." | `resolve_ticket` called on the SAME ticket_id from turn 1; `TICKET_STORE[id].status == "resolved"`, `resolution_note` populated |
 
 **Edge cases to cover**
 - `resolve_ticket` called with a `ticket_id` that was never created — returns `{"error": "ticket not found"}`; confirm the agent relays that cleanly rather than claiming success.
-- Reject a `create_ticket` call with an invalid `priority` (README stretch goal: the enum SHOULD prevent the model from ever sending one, so to actually test the error path you'd need to call `create_ticket` directly in Python, bypassing the schema) — see how the model responds when your code returns a validation error as the tool result instead of raising.
+- Reject a `create_ticket` call with an invalid `priority` (README stretch goal: FastMCP's type-hint-derived schema does NOT enforce an enum the way a hand-written JSON schema would, so this needs an explicit check written into the tool body) — see how the model responds when your code returns a validation error as the tool result instead of raising.
 - Add `add_ticket_comment(ticket_id, comment)` (stretch goal) for a customer who adds detail BEFORE the ticket is resolved — not implemented in the reference solution.
-- README's own discussion prompt: compare blast radius of the typed `priority` enum vs. a free-text priority string — where else in Day 1-3's labs would this same narrowing help? (Good group discussion, not a code exercise.)
+- Part A and Part B are two independent OS processes with two independent `TICKET_STORE` dicts sharing zero memory — README's own discussion prompt walks through what goes wrong if you inspect Part A's in-process dict expecting to see a ticket Part B's subprocess just created.
+- README's own discussion prompt: compare blast radius of a typed `priority` enum vs. a free-text priority string — where else in Day 1-3's labs would this same narrowing help? (Good group discussion, not a code exercise.)
 
 ---
 
