@@ -4,7 +4,7 @@ AM · H3 — Telecom SIP Call State Machine (REFERENCE SOLUTION)
 Call events stay simulated (see README) — but every line the AGENT speaks
 (greeting, LLM replies, transfer message) is synthesized through a REAL
 Deepgram Aura TTS stream when DEEPGRAM_API_KEY is set, and saved as a WAV
-under sample_audio/, so a live demo has actual audio to play back instead
+under sample_audio_h3/, so a live demo has actual audio to play back instead
 of just printed text. No key, or the socket fails to open/mid-call? speak()
 falls back to text-only silently — the state machine logic never changes
 either way, same seam pattern as AM_H1's stt()/tts().
@@ -23,7 +23,7 @@ load_dotenv()
 client = Anthropic()
 MODEL = "claude-sonnet-5"
 
-AUDIO_DIR = Path(__file__).parent / "sample_audio"
+AUDIO_DIR = Path(__file__).parent / "sample_audio_h3"
 TTS_MODEL = "aura-2-asteria-en"
 TTS_ENCODING = "linear16"
 TTS_SAMPLE_RATE = "16000"
@@ -45,18 +45,28 @@ if os.environ.get("DEEPGRAM_API_KEY"):
 @contextlib.contextmanager
 def open_tts_stream():
     """One persistent Deepgram TTS websocket for the whole call, or a
-    no-op null context if Deepgram isn't configured / the handshake fails."""
+    no-op null context if Deepgram isn't configured / the handshake fails.
+    Only the CONNECT step is guarded — once open, any exception raised by
+    caller code inside the `with` block must propagate normally, not be
+    swallowed here (a @contextmanager generator can only yield once; try-
+    yielding a fallback after catching an exception thrown at that first
+    yield raises "generator didn't stop after throw()")."""
     if deepgram is None:
         yield None
         return
     try:
-        with deepgram.speak.v1.connect(
+        cm = deepgram.speak.v1.connect(
             model=TTS_MODEL, encoding=TTS_ENCODING, sample_rate=TTS_SAMPLE_RATE,
-        ) as ws:
-            yield ws
+        )
+        ws = cm.__enter__()
     except Exception as exc:
         print(f"Deepgram TTS websocket unavailable ({exc}) — text-only.")
         yield None
+        return
+    try:
+        yield ws
+    finally:
+        cm.__exit__(None, None, None)
 
 
 _tts_ws = None
@@ -65,7 +75,7 @@ _clip_index = 0
 
 def speak(label: str, text: str):
     """Print the agent's line and, when a real TTS socket is open,
-    synthesize it and save the clip to sample_audio/NN_label.wav."""
+    synthesize it and save the clip to sample_audio_h3/NN_label.wav."""
     global _clip_index
     print(f"  -> {label}: \"{text}\"")
     if _tts_ws is None:
@@ -111,7 +121,9 @@ def call_llm(transcript: str) -> str:
         ),
         messages=[{"role": "user", "content": transcript}],
     )
-    return response.content[0].text
+    # content[0] isn't guaranteed to be the text block — this model can
+    # return a ThinkingBlock ahead of it, which has no .text attribute.
+    return next(b.text for b in response.content if b.type == "text")
 
 
 def handle_event(state: str, event: dict) -> str:
@@ -154,7 +166,7 @@ if __name__ == "__main__":
 # To hear the agent's side for real: set DEEPGRAM_API_KEY in .env (already
 # the case in this repo's .env) and `pip install deepgram-sdk` — the run
 # above will synthesize the greeting, both replies, and the transfer line
-# into sample_audio/01_greeting.wav .. 04_agent.wav. No key -> falls back
+# into sample_audio_h3/01_greeting.wav .. 04_agent.wav. No key -> falls back
 # to text-only, no code changes needed either way.
 #
 # Expected transitions:

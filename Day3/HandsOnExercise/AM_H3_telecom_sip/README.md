@@ -15,7 +15,7 @@ Call events (including "customer speech") stay simulated either way — but
 for a live demo, everything the AGENT says (greeting, LLM replies, the
 transfer line) is synthesized through a **real Deepgram Aura TTS stream**
 when `DEEPGRAM_API_KEY` is set, via the given `speak(label, text)` helper,
-and saved as WAVs under `sample_audio/`. No key? `speak()` falls back to
+and saved as WAVs under `sample_audio_h3/`. No key? `speak()` falls back to
 text-only, silently — your `handle_event()` logic never needs to branch on
 which path it's on, same seam pattern as AM·H1's `stt()`/`tts()`.
 
@@ -36,8 +36,9 @@ Build a call state machine with states `RINGING`, `ANSWERED`,
    `ANSWERED` and play a greeting; on `speech` while `IN_PROGRESS`, call
    the LLM for a reply).
 2. Wire `speech` events through this morning's H1 pipeline pattern
-   (STT → LLM → TTS conceptually — here just LLM, since STT/TTS are
-   simulated) to generate a spoken reply.
+   (STT → LLM → TTS conceptually — here just LLM, since STT is simulated;
+   TTS goes through the given `speak()` helper, real when a Deepgram key
+   is set) to generate a spoken reply.
 3. Handle `dtmf` — e.g., pressing `0` during the call should transition
    toward a "transfer to human" action rather than going through the LLM.
 4. Run `simulate_incoming_call()` (provided) through your state machine
@@ -54,7 +55,7 @@ just a "handle the next thing that happens" script.
 ## Files
 - `starter.py` — scaffold with TODOs, includes `simulate_incoming_call()`.
 - `solution.py` — reference solution.
-- `sample_audio/` — generated at runtime; real Deepgram TTS clips of the
+- `sample_audio_h3/` — generated at runtime; real Deepgram TTS clips of the
   agent's lines (greeting, replies, transfer message) when a Deepgram key
   is set. Empty / absent otherwise — nothing to commit, nothing required.
 

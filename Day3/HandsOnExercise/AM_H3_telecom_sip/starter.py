@@ -4,7 +4,7 @@ AM · H3 — Telecom SIP Call State Machine (STARTER)
 Call events stay simulated (see README) — but the agent's spoken lines
 (greeting, replies, transfer message) are synthesized through a REAL
 Deepgram Aura TTS stream when DEEPGRAM_API_KEY is set, saved as WAVs under
-sample_audio/, so a live demo has actual audio to play back. No key? The
+sample_audio_h3/, so a live demo has actual audio to play back. No key? The
 given speak() helper below falls back to text-only, silently — your
 handle_event() logic (the actual TODO) doesn't need to know or care which
 path it's on.
@@ -25,7 +25,7 @@ MODEL = "claude-sonnet-5"
 
 STATES = ["RINGING", "ANSWERED", "IN_PROGRESS", "ENDED"]
 
-AUDIO_DIR = Path(__file__).parent / "sample_audio"
+AUDIO_DIR = Path(__file__).parent / "sample_audio_h3"
 TTS_MODEL = "aura-2-asteria-en"
 TTS_ENCODING = "linear16"
 TTS_SAMPLE_RATE = "16000"
@@ -48,18 +48,25 @@ if os.environ.get("DEEPGRAM_API_KEY"):
 def open_tts_stream():
     """Given — one persistent Deepgram TTS websocket for the whole call,
     or a no-op null context if Deepgram isn't configured / the handshake
-    fails."""
+    fails. Only the CONNECT step is guarded — once open, any exception
+    from your handle_event() code inside the `with` block propagates
+    normally, it isn't swallowed here."""
     if deepgram is None:
         yield None
         return
     try:
-        with deepgram.speak.v1.connect(
+        cm = deepgram.speak.v1.connect(
             model=TTS_MODEL, encoding=TTS_ENCODING, sample_rate=TTS_SAMPLE_RATE,
-        ) as ws:
-            yield ws
+        )
+        ws = cm.__enter__()
     except Exception as exc:
         print(f"Deepgram TTS websocket unavailable ({exc}) — text-only.")
         yield None
+        return
+    try:
+        yield ws
+    finally:
+        cm.__exit__(None, None, None)
 
 
 _tts_ws = None
@@ -68,7 +75,7 @@ _clip_index = 0
 
 def speak(label: str, text: str):
     """Given — print the agent's line and, when a real TTS socket is
-    open, synthesize it and save the clip to sample_audio/NN_label.wav.
+    open, synthesize it and save the clip to sample_audio_h3/NN_label.wav.
     Call this instead of print() for anything the AGENT says."""
     global _clip_index
     print(f"  -> {label}: \"{text}\"")
@@ -116,7 +123,9 @@ def call_llm(transcript: str) -> str:
         ),
         messages=[{"role": "user", "content": transcript}],
     )
-    return response.content[0].text
+    # content[0] isn't guaranteed to be the text block — this model can
+    # return a ThinkingBlock ahead of it, which has no .text attribute.
+    return next(b.text for b in response.content if b.type == "text")
 
 
 def handle_event(state: str, event: dict):
@@ -132,12 +141,34 @@ def handle_event(state: str, event: dict):
       - any state + event "hangup" -> ENDED, action: print "Call ended."
     Use the given speak(label, text) helper (not print) for anything the
     AGENT says — it prints the line AND synthesizes real audio into
-    sample_audio/ when DEEPGRAM_API_KEY is set. Customer lines (from the
+    sample_audio_h3/ when DEEPGRAM_API_KEY is set. Customer lines (from the
     "speech" event's "text") can stay a plain print — they represent
     already-transcribed STT output, not agent audio to synthesize.
     Return the new state.
     """
-    raise NotImplementedError
+    etype = event["type"]
+    if etype == "hangup":
+        print(" -> Call ended.")
+        return "ENDED"
+
+    if etype == "ring" and state == "RINGING":
+        return "RINGING"
+
+    if etype == "answer" and state == "RINGING":
+        speak("Greetings! Thanks for calling how can I help you today?")
+        return "ANSWERED"
+
+    if etype == "dtmf" and event.get("digit") == "0" and state in ("ANSWERED", "IN_PROGRESS"):
+        speak("Transfer", "Transferring you to a human agent now.")
+        return state
+
+    if etype == "speech" and state in ("ANSWERED", "IN_PROGRESS"):
+        reply = call_llm(event["text"])
+        print(f" -> Customer: \"{event['text']}\"")
+        speak("Agent", reply)
+        return "IN_PROGRESS"
+    print(f" -> (unhandled event {etype} in state {state})")
+    return state
 
 
 if __name__ == "__main__":
@@ -151,5 +182,5 @@ if __name__ == "__main__":
 
 # To hear the agent's side for real: set DEEPGRAM_API_KEY in .env and
 # `pip install deepgram-sdk` — a correct handle_event() will synthesize
-# the greeting, both replies, and the transfer line into sample_audio/.
+# the greeting, both replies, and the transfer line into sample_audio_h3/.
 # No key -> falls back to text-only, no code changes needed either way.

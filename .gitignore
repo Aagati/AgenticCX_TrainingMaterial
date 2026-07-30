@@ -194,3 +194,4 @@ memory_store.json
 
 # Voice lab audio (student-recorded WAVs / synthesized replies, not source)
 **/sample_audio/
+**/sample_audio_h3/
