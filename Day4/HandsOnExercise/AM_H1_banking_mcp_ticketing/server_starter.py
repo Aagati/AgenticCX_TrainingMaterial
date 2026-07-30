@@ -15,10 +15,17 @@ Run directly (for manual inspection with an MCP-compatible client/inspector):
     python server_starter.py
 """
 
+import sys
 import uuid
 from mcp.server.fastmcp import FastMCP
 
 mcp = FastMCP("banking-ticketing")
+
+
+def log(msg: str):
+    # stderr, never stdout — stdout is the actual MCP JSON-RPC wire format
+    # over stdio transport; printing here would corrupt it for a real client.
+    print(f"[server] {msg}", file=sys.stderr, flush=True)
 
 TICKET_STORE: dict[str, dict] = {}
 
@@ -54,7 +61,10 @@ def resolve_ticket(ticket_id: str, resolution_note: str) -> dict:
 
 
 if __name__ == "__main__":
+    log("banking-ticketing MCP server starting — stdio transport, waiting for a client to connect...")
+    log("(this will sit here silently until a client sends it something over stdin — that's normal, not a hang)")
     mcp.run(transport="stdio")
+    log("server stopped")
 
 # Notice create_ticket/resolve_ticket are registered with @mcp.tool()
 # instead of a hand-written CREATE_TICKET_TOOL/RESOLVE_TICKET_TOOL JSON

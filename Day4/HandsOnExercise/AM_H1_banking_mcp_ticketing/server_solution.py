@@ -7,7 +7,7 @@ standalone to inspect, or let client_starter.py/client_solution.py spawn
 it as a subprocess.
 
 Setup:
-    pip install mcp
+    pip install mcp (=> FastMCP - Python's SDK for building MCPs)
     No new API key needed — this process never calls an LLM, it just
     serves tools over the MCP protocol.
 
@@ -15,10 +15,17 @@ Run directly (for manual inspection with an MCP-compatible client/inspector):
     python server_solution.py
 """
 
+import sys
 import uuid
 from mcp.server.fastmcp import FastMCP
 
 mcp = FastMCP("banking-ticketing")
+
+
+def log(msg: str):
+    # stderr, never stdout — stdout is the actual MCP JSON-RPC wire format
+    # over stdio transport; printing here would corrupt it for a real client.
+    print(f"[server] {msg}", file=sys.stderr, flush=True)
 
 TICKET_STORE: dict[str, dict] = {}
 
@@ -37,6 +44,7 @@ def create_ticket(subject: str, description: str, priority: str) -> dict:
         "subject": subject, "description": description, "priority": priority,
         "status": "open", "resolution_note": None,
     }
+    log(f"create_ticket called -> {ticket_id} ({priority})")
     return {"ticket_id": ticket_id, "status": "open"}
 
 
@@ -49,14 +57,19 @@ def resolve_ticket(ticket_id: str, resolution_note: str) -> dict:
         resolution_note: A brief note on how the issue was resolved.
     """
     if ticket_id not in TICKET_STORE:
+        log(f"resolve_ticket called -> {ticket_id} NOT FOUND")
         return {"error": "ticket not found"}
     TICKET_STORE[ticket_id]["status"] = "resolved"
     TICKET_STORE[ticket_id]["resolution_note"] = resolution_note
+    log(f"resolve_ticket called -> {ticket_id} resolved")
     return {"ticket_id": ticket_id, "status": "resolved"}
 
 
 if __name__ == "__main__":
+    log("banking-ticketing MCP server starting — stdio transport, waiting for a client to connect...")
+    log("(this will sit here silently until a client sends it something over stdin — that's normal, not a hang)")
     mcp.run(transport="stdio")
+    log("server stopped")
 
 # Notice create_ticket/resolve_ticket are registered with @mcp.tool()
 # instead of a hand-written CREATE_TICKET_TOOL/RESOLVE_TICKET_TOOL JSON

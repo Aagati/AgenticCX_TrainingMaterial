@@ -13,7 +13,7 @@ FILLER_ENDINGS = ("um", "uh", "so", "and", "on", "the", "to", "for", "of")
 
 def is_turn_complete(silence_ms: int, threshold_ms: int) -> bool:
     """TODO 1: Return True once silence_ms >= threshold_ms."""
-    raise NotImplementedError
+    return silence_ms >= threshold_ms
 
 
 def evaluate_threshold(threshold_ms: int):
@@ -28,7 +28,18 @@ def evaluate_threshold(threshold_ms: int):
     average delay = threshold_ms (this becomes more interesting in TODO 4).
     Return (false_interruption_count, avg_delay_ms).
     """
-    raise NotImplementedError
+    false_interruptions = 0
+    delays = []
+
+    for call in TEST_CALLS:
+        would_end = is_turn_complete(call["silence_ms"], threshold_ms)
+        if would_end and not call["is_real_end_of_turn"]:
+            false_interruptions += 1
+        if call["is_real_end_of_turn"] and would_end:
+            delays.append(threshold_ms)
+
+    avg_delays = sum(delays) / len(delays) if delays else 0
+    return false_interruptions, avg_delays
 
 
 def sweep_thresholds():
@@ -37,7 +48,10 @@ def sweep_thresholds():
     evaluate_threshold() and print a row: threshold, false interruptions,
     avg delay.
     """
-    raise NotImplementedError
+    print(f"{'Threshold':>10} | {'False Interruptions':>20} | {'Avg Delay (ms)':>15}")
+    for threshold_ms in range(200, 1001, 100):
+        fi, delay = evaluate_threshold(threshold_ms)
+        print(f"{threshold_ms:>10} | {fi:>20} | {delay:>15.0f}")
 
 
 def ends_with_filler(transcript_so_far: str) -> bool:
@@ -52,7 +66,8 @@ def is_turn_complete_smart(transcript_so_far: str, silence_ms: int) -> bool:
     complete. Otherwise, use a SHORTER threshold (e.g. 350ms). Return
     whether silence_ms meets the applicable threshold.
     """
-    raise NotImplementedError
+    threshold_ms = 700 if ends_with_filler(transcript_so_far) else 350 
+    return silence_ms >= threshold_ms
 
 
 def evaluate_smart():
@@ -61,7 +76,22 @@ def evaluate_smart():
     instead of a fixed threshold. Print the false interruption count and
     compare it to the best fixed-threshold result from the sweep.
     """
-    raise NotImplementedError
+    false_interruptions = 0
+    delays = []
+
+    for call in TEST_CALLS:
+        would_end = is_turn_complete_smart(call["transcript_so_far"], call["silence_ms"])
+        if would_end and not call["is_real_end_of_turn"]:
+            false_interruptions += 1
+            print(f"False Interruption raised on {call['call_id']}\"{call['transcript_so_far']}\ {call['note']}")
+        if call["is_real_end_of_turn"] and would_end:
+            applicable = 700 if ends_with_filler(call["transcript_so_far"]) else 350
+            delays.append(applicable)
+
+    avg_delays = sum(delays) / len(delays) if delays else 0
+    return avg_delays, false_interruptions
+                  
+
 
 
 if __name__ == "__main__":
@@ -84,7 +114,12 @@ async def simulate_tts_playback(text: str, chunk_delay: float = 0.15):
     f"  [TTS playing]: {word}" and `await asyncio.sleep(chunk_delay)`.
     Return "completed" after all words are done.
     """
-    raise NotImplementedError
+    words = text.split()
+    for w in words:
+        print(f" [TTS Playing]: {w}")
+        await asyncio.sleep(chunk_delay)
+    return "completed"
+
 
 
 class InterruptionManager:
@@ -101,13 +136,19 @@ class InterruptionManager:
     True. Otherwise return False.
     """
     def __init__(self):
-        raise NotImplementedError
+        self.current_task = None
+        self.is_speaking = False
 
     def start_speaking(self, task):
-        raise NotImplementedError
+        self.current_task = task
+        self.is_speaking = True
 
     def barge_in(self) -> bool:
-        raise NotImplementedError
+        if self.is_speaking and self.current_task and not self.current_task.done():
+            self.current_task.cancel()
+            self.is_speaking = False
+            return True
+        return False
 
 
 async def demo_barge_in():
@@ -120,7 +161,21 @@ async def demo_barge_in():
     asyncio.CancelledError — print [CONFIRMED] if cancelled, or a warning
     if it completed anyway.
     """
-    raise NotImplementedError
+    manager = InterruptionManager()
+    reply = "I can help you with that claim, let me pull up the details for your policy now" #Simulative value
+    task = asyncio.create_task(simulate_tts_playback(reply))
+    manager.start_speaking(task)
+
+    await asyncio.sleep(.5)
+    print("\n [VAD] customer speech detected mid-playback -> barge_in()")
+    cancelled = manager.barge_in()
+    print(f" [RESULT] cancellation triggered: {cancelled}")
+
+    try:
+        await task
+        print(" [WARNING] playback completed anyway — cancellation didn't take effect")
+    except asyncio.CancelledError:
+        print(" [CONFIRMED] playback stopped immediately, did not finish the sentence")
 
 
 if __name__ == "__main__":
