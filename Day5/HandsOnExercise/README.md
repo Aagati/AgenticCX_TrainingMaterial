@@ -3,8 +3,8 @@
 
 This folder contains the six hands-on labs referenced in the Day 5 deck and
 the Trainer & Participant Guide. Each lab has its own folder with everything
-needed to run it: instructions, starter files, sample data, and (where
-applicable) a facilitator-only solution.
+needed to run it: a `README.md` with objective/steps/deliverable, starter
+files, sample data, and (where applicable) a facilitator-only solution.
 
 **Facilitators:** files named `*_solution.py` or `*_SOLUTION.xlsx` are
 reference answers — don't hand these to participants before the lab.
@@ -24,9 +24,9 @@ Everything else is participant-facing.
 
 | Folder | Lab | Industry | Format |
 |---|---|---|---|
-| `04_Postlunch_H1_Banking_Governance_Pack` | Governance Pack | Banking | Word template |
+| `04_Postlunch_H1_Banking_Governance_Pack` | Governance Pack | Banking | Markdown template |
 | `05_Postlunch_H2_Insurance_Eval_Gate` | Eval-Gated Rollout | Insurance | Python |
-| `06_Postlunch_H3_Team_Capstone_Brief` | Capstone Scoping | Team Exercise | Word template |
+| `06_Postlunch_H3_Team_Capstone_Brief` | Capstone Scoping | Team Exercise | Markdown template |
 
 ---
 
@@ -42,8 +42,13 @@ python eval_suite_starter.py      # participant version — raises NotImplemente
 python eval_suite_solution.py     # facilitator reference — runs end-to-end
 ```
 
-No API keys or external packages are required — every lab is self-contained
-and runs on the Python standard library.
+Labs 02 and 05 are self-contained on the Python standard library — no API
+keys needed. **Lab 01 is the exception:** it traces every golden through
+Langfuse and runs a real LLM-as-judge call, so it needs
+`ANTHROPIC_API_KEY`, `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, and
+`LANGFUSE_BASE_URL` set in the `.env` file at the repo root
+(`pip install langfuse anthropic pydantic python-dotenv`; see that lab's
+own README for details).
 
 ## Running the Excel lab
 
@@ -51,20 +56,21 @@ Open `Retail_ROI_Calculator_TEMPLATE.xlsx` directly in Excel (or Google
 Sheets / LibreOffice Calc). The `Retail_ROI_Calculator_SOLUTION.xlsx` in the
 same folder is the facilitator reference with every formula filled in.
 
-## Using the Word templates
+## Using the Markdown templates
 
-`Governance_Pack_Template.docx` and `Capstone_Brief_Template.docx` are
-fill-in-the-blank documents — yellow boxes are where participants type.
-Each includes a worked example in an appendix, filled in for a *different*
-scenario than the one participants are asked to complete, so it can guide
-without being copyable.
+`Governance_Pack_Template.md` and `Capstone_Brief_Template.md` are
+fill-in-the-blank documents — open them in any Markdown editor (or plain
+text) and fill in the blanks under each heading. Each includes a worked
+example in an appendix, filled in for a *different* scenario than the one
+participants are asked to complete, so it can guide without being
+copyable.
 
 ---
 
 ## Supplementary files (added after reviewer feedback)
 
 Three files were added after the initial release, in response to a technical
-review. They are **additive** — the original Word/Excel deliverables are
+review. They are **additive** — the original Markdown/Excel deliverables are
 still the primary artifact for their labs — for teams who also want a
 programmatic version:
 

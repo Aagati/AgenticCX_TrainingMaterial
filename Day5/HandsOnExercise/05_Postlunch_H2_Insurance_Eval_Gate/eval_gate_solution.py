@@ -10,9 +10,17 @@ Expected verdicts against the provided data:
 """
 
 import json
+import os
+import sys
+
+if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
+LAB_DIR = os.path.dirname(os.path.abspath(__file__))
+CANDIDATES_PATH = os.path.join(LAB_DIR, "candidate_versions.json")
 
 
-def load_data(path="candidate_versions.json"):
+def load_data(path=CANDIDATES_PATH):
     with open(path) as f:
         return json.load(f)
 
@@ -51,7 +59,7 @@ def evaluate_gate(baseline_resolution_rate: float, candidate: dict) -> dict:
     }
 
 
-def run_gate_report(path="candidate_versions.json"):
+def run_gate_report(path=CANDIDATES_PATH):
     data = load_data(path)
     baseline_rate = data["baseline"]["resolution_rate"]
 

@@ -36,6 +36,7 @@ score AGENT turns — does agent tone ever make things worse
 """
 
 import json
+import os
 from collections import Counter
 
 NEGATIVE_WORDS = {
@@ -48,8 +49,11 @@ POSITIVE_WORDS = {
     "relief", "helpful", "happy",
 }
 
+LAB_DIR = os.path.dirname(os.path.abspath(__file__))
+CONVERSATIONS_PATH = os.path.join(LAB_DIR, "conversations.json")
 
-def load_conversations(path="conversations.json"):
+
+def load_conversations(path=CONVERSATIONS_PATH):
     with open(path) as f:
         data = json.load(f)
     return data["conversations"]
@@ -98,7 +102,7 @@ def resolution_score(conversation: dict) -> int:
     raise NotImplementedError
 
 
-def run_report(path="conversations.json"):
+def run_report(path=CONVERSATIONS_PATH):
     conversations = load_conversations(path)
 
     flagged_sentiment = []

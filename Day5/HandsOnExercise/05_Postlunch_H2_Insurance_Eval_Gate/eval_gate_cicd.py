@@ -35,14 +35,14 @@ import argparse
 import sys
 import json
 
-# Reuse the facilitator solution's scoring logic rather than duplicating it.
-from eval_gate_solution import load_data, evaluate_gate
+# Reuse the facilitator solution's scoring logic (and data path) rather than duplicating it.
+from eval_gate_solution import load_data, evaluate_gate, CANDIDATES_PATH
 
 
 def main():
     parser = argparse.ArgumentParser(description="CI/CD eval gate for a single candidate agent version.")
     parser.add_argument("--candidate", required=True, help="Candidate version name, e.g. v2.1-candidate")
-    parser.add_argument("--data", default="candidate_versions.json", help="Path to candidate data file")
+    parser.add_argument("--data", default=CANDIDATES_PATH, help="Path to candidate data file")
     args = parser.parse_args()
 
     data = load_data(args.data)
