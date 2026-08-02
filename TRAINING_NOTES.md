@@ -51,6 +51,14 @@ ever needs rebuilding.
    scoring, lexicon-based online QA, an ROI model tying it to a business case,
    and an eval gate that BLOCKS a rollout on regression or any safety
    violation, no override.
+6. **Capstone (Problem Statement 2)** — `Capstone_Telecom_Omnichannel_Agent/`
+   fuses Days 1-5 into one graded build: multi-agent handoff (Day 2) over
+   MCP tools with idempotency (Day 4), guarded by permissions + layered
+   injection defense (Day 4), priced and traced through Langfuse (Day 5).
+   Siblings: `Day4/HandsOnExercise/Capstone_Banking_MCP_Agent` (Days 1+4)
+   and `Day5/Capstone_Lab_CX_Agent/lab30` (Days 1+4+5) — neither of those
+   combines multi-agent teams with the MCP/permissions/injection stack
+   under Langfuse observability the way this one does.
 
 ## Known pre-existing issues (flagged, not fixed unless asked)
 

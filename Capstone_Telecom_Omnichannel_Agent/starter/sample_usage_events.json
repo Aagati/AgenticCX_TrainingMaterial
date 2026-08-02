@@ -1,0 +1,20 @@
+{
+  "_comment": "Recorded usage ledger for Part 6, gradeable with zero API key. Pricing per claude-sonnet-5 standard rate as of 2026-07 (see PRICING in cost.py): $3.00/MTok input, $15.00/MTok output. (A temporary $2.00/$10.00 intro rate applies through 2026-08-31 - this fixture intentionally uses the standard post-intro rate so expected_total_cost_usd doesn't go stale once the intro window ends.) cost = input_tokens*3/1e6 + output_tokens*15/1e6 per event.",
+  "events": [
+    {"session_id": "conv-001", "turn_id": 1, "agent_role": "supervisor", "model": "claude-sonnet-5", "input_tokens": 1000, "output_tokens": 100, "cache_read_tokens": 0},
+    {"session_id": "conv-001", "turn_id": 2, "agent_role": "billing_agent", "model": "claude-sonnet-5", "input_tokens": 2000, "output_tokens": 400, "cache_read_tokens": 0},
+    {"session_id": "conv-001", "turn_id": 3, "agent_role": "billing_agent", "model": "claude-sonnet-5", "input_tokens": 1500, "output_tokens": 300, "cache_read_tokens": 0},
+    {"session_id": "conv-002", "turn_id": 1, "agent_role": "plans_agent", "model": "claude-sonnet-5", "input_tokens": 1200, "output_tokens": 250, "cache_read_tokens": 0},
+    {"session_id": "conv-003", "turn_id": 1, "agent_role": "tech_agent", "model": "claude-sonnet-5", "input_tokens": 1000, "output_tokens": 200, "cache_read_tokens": 0},
+    {"session_id": "conv-001", "turn_id": 4, "agent_role": "supervisor", "model": "claude-sonnet-5", "input_tokens": 700, "output_tokens": 100, "cache_read_tokens": 0}
+  ],
+  "expected_total_cost_usd": 0.04245,
+  "expected_total_input_tokens": 7400,
+  "expected_total_output_tokens": 1350,
+  "expected_by_agent_role": {
+    "supervisor": 0.0081,
+    "billing_agent": 0.021,
+    "plans_agent": 0.00735,
+    "tech_agent": 0.006
+  }
+}

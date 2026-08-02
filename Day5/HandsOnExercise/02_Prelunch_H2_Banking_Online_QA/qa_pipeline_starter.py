@@ -68,7 +68,16 @@ def turn_sentiment(text: str) -> int:
     word list, and return the sign of (positive_count - negative_count).
     """
     # YOUR CODE HERE
-    raise NotImplementedError
+    words = set(text.lower().replace("!", " ").replace("?", " ").replace(".", " ").replace(",", " ").split())
+    pos = len(words & POSITIVE_WORDS)
+    neg = len(words & NEGATIVE_WORDS)
+
+    if pos > neg:
+        return 1
+    elif pos < neg:
+        return -1
+    else:
+        return 0
 
 
 def sentiment_trend(conversation: dict) -> list:
@@ -77,7 +86,8 @@ def sentiment_trend(conversation: dict) -> list:
     CUSTOMER turn in the conversation, in order, using turn_sentiment().
     """
     # YOUR CODE HERE
-    raise NotImplementedError
+    return [turn_sentiment(t["text"]) for t in conversation["turns"] if t["speaker"] == "customer"]
+
 
 
 def has_sharp_negative_shift(trend: list) -> bool:
@@ -90,7 +100,10 @@ def has_sharp_negative_shift(trend: list) -> bool:
     (e.g. +1 -> -1).
     """
     # YOUR CODE HERE
-    raise NotImplementedError
+    for i in range(1, len(trend)):
+        if trend[i-1] - trend[i] >= 2:
+            return True
+    return False
 
 
 def resolution_score(conversation: dict) -> int:
@@ -99,7 +112,7 @@ def resolution_score(conversation: dict) -> int:
     using conversation["resolved"].
     """
     # YOUR CODE HERE
-    raise NotImplementedError
+    return 1 if conversation["resolved"] else 0
 
 
 def run_report(path=CONVERSATIONS_PATH):

@@ -1,0 +1,37 @@
+{
+  "customers": ["cust_1001", "cust_2002", "cust_3003"],
+  "accounts": {
+    "ACC-5001": {
+      "customer_id": "cust_1001",
+      "plan_id": "PLAN-PLUS",
+      "balance_cents": 4250,
+      "contract_end": "2026-11-01",
+      "sim_iccid": "8991000000000000001",
+      "payment_method_last4": "4471"
+    },
+    "ACC-5002": {
+      "customer_id": "cust_2002",
+      "plan_id": "PLAN-ESSENTIAL",
+      "balance_cents": 0,
+      "contract_end": null,
+      "sim_iccid": "8991000000000000002",
+      "payment_method_last4": "9012"
+    },
+    "ACC-5003": {
+      "customer_id": "cust_3003",
+      "plan_id": "PLAN-UNLIMITED",
+      "balance_cents": 1200,
+      "contract_end": "2027-01-15",
+      "sim_iccid": "8991000000000000003",
+      "payment_method_last4": "3344"
+    },
+    "ACC-5004": {
+      "customer_id": "cust_3003",
+      "plan_id": "PLAN-ESSENTIAL",
+      "balance_cents": 0,
+      "contract_end": null,
+      "sim_iccid": "8991000000000000004",
+      "payment_method_last4": "3344"
+    }
+  }
+}

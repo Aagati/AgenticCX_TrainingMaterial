@@ -1,6 +1,6 @@
-# Pre-Lunch · H2 — Banking: Online QA with Sentiment + Escalation
+# Lab-2: Banking: Online QA with Sentiment + Escalation
 
-**Track:** Banking | **Time box:** 25–35 min | **Ships:** an online-QA summary report
+**Track:** Banking | **Ships:** an online-QA summary report
 **Pattern practiced:** three independent monitoring signals (resolution, sentiment, escalation) — deliberately not blended into one score
 
 ## Objective
@@ -18,8 +18,7 @@ Add an online QA layer to a simulated stream of 13 banking-support conversations
 ## Run
 ```bash
 cd 02_Prelunch_H2_Banking_Online_QA
-python qa_pipeline_starter.py      # participant version — raises NotImplementedError until the 4 TODOs are filled in
-python qa_pipeline_solution.py     # facilitator reference — runs end-to-end
+python qa_pipeline_starter.py      # participant version — raises NotImplementedError until the 4 
 ```
 No API keys or external packages required — everything runs on the Python standard library.
 

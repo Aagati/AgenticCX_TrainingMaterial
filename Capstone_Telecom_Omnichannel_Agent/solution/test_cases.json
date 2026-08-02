@@ -1,0 +1,36 @@
+{
+  "retrieval_cases": [
+    {"query": "what data plans does northwind offer, essential plus or unlimited", "expected_doc_id": "TEL-PLAN-01"},
+    {"query": "what happens when downgrading a plan while still in contract, is there a fee", "expected_doc_id": "TEL-PLAN-02"},
+    {"query": "how is proration calculated for a mid-cycle plan change", "expected_doc_id": "TEL-BILL-01"},
+    {"query": "what happens if i go over my monthly data allowance, is there an overage charge", "expected_doc_id": "TEL-BILL-02"},
+    {"query": "is there a cap on goodwill credits and do i need a documented reason", "expected_doc_id": "TEL-BILL-03"},
+    {"query": "how much does international roaming cost, is there a daily pass option", "expected_doc_id": "TEL-BILL-04"},
+    {"query": "what is the late fee and can i set up a payment arrangement before my account is overdue", "expected_doc_id": "TEL-BILL-05"},
+    {"query": "if there's a network outage for more than four hours am i eligible for a service credit", "expected_doc_id": "TEL-NET-01"},
+    {"query": "my wifi keeps dropping, what's the troubleshooting ladder before i escalate to a ticket", "expected_doc_id": "TEL-NET-02"},
+    {"query": "how are service tickets prioritized, what's the priority matrix", "expected_doc_id": "TEL-NET-03"},
+    {"query": "what do you need to verify my identity before disclosing account details", "expected_doc_id": "TEL-POL-01"},
+    {"query": "do you have to disclose that i'm talking to an artificial intelligence agent and get my consent to record the call", "expected_doc_id": "TEL-POL-02"},
+    {"query": "what's the best cryptocurrency to invest in right now", "expected_doc_id": null}
+  ],
+  "permission_cases": [
+    {"customer_id": "cust_1001", "account_id": "ACC-5001", "agent_role": "billing_agent", "tool_name": "apply_billing_credit", "amount_cents": 2000, "expected_allowed": true, "expected_reason": "allowed"},
+    {"customer_id": "cust_2002", "account_id": "ACC-5001", "agent_role": "billing_agent", "tool_name": "apply_billing_credit", "amount_cents": 2000, "expected_allowed": false, "expected_reason": "not_owner"},
+    {"customer_id": "cust_1001", "account_id": "ACC-5001", "agent_role": "tech_agent", "tool_name": "apply_billing_credit", "amount_cents": 2000, "expected_allowed": false, "expected_reason": "tool_not_allowed_for_role"},
+    {"customer_id": "cust_2002", "account_id": "ACC-5001", "agent_role": "tech_agent", "tool_name": "apply_billing_credit", "amount_cents": 2000, "expected_allowed": false, "expected_reason": "not_owner"},
+    {"customer_id": "cust_1001", "account_id": "ACC-5001", "agent_role": "billing_agent", "tool_name": "apply_billing_credit", "amount_cents": 999999, "expected_allowed": false, "expected_reason": "limit_exceeded"},
+    {"customer_id": "cust_9999", "account_id": "ACC-5001", "agent_role": "billing_agent", "tool_name": "apply_billing_credit", "amount_cents": 2000, "expected_allowed": false, "expected_reason": "unknown_customer"},
+    {"customer_id": "cust_1001", "account_id": "ACC-5001", "agent_role": "ghost_agent", "tool_name": "apply_billing_credit", "amount_cents": 2000, "expected_allowed": false, "expected_reason": "unknown_role"},
+    {"customer_id": "cust_3003", "account_id": "ACC-5003", "agent_role": "plans_agent", "tool_name": "change_plan", "amount_cents": null, "expected_allowed": true, "expected_reason": "allowed"},
+    {"customer_id": "cust_3003", "account_id": "ACC-5004", "agent_role": "tech_agent", "tool_name": "create_service_ticket", "amount_cents": null, "expected_allowed": true, "expected_reason": "allowed"},
+    {"customer_id": "cust_1001", "account_id": "ACC-5002", "agent_role": "billing_agent", "tool_name": "apply_billing_credit", "amount_cents": 1000, "expected_allowed": false, "expected_reason": "not_owner"}
+  ],
+  "routing_cases": [
+    {"message": "I'd like to upgrade my plan to Unlimited.", "expected_specialist": "plans"},
+    {"message": "There's a $12 charge on my bill I don't recognize.", "expected_specialist": "billing"},
+    {"message": "My internet has been down since this morning.", "expected_specialist": "tech_support"},
+    {"message": "Hi there!", "expected_specialist": null},
+    {"message": "Can you waive the downgrade fee since I'm still in contract?", "expected_specialist": "plans"}
+  ]
+}

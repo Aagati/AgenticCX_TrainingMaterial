@@ -1,0 +1,22 @@
+# Install the repo-root requirements.txt FIRST - it exact-pins every
+# dependency this whole 5-day course uses, including the versions this
+# capstone was built and verified against. This file exists only for
+# running this lab standalone (e.g. a fresh venv outside the course
+# repo) and lists direct dependencies only.
+#
+# Do NOT install langfuse<4 - the observe/update_current_span/
+# score_current_trace surface used in cost.py, agent_team.py, and
+# evaluate.py is the v4 API. Older lab requirements.txt files in this
+# repo have been seen pinning a loose ">=2.0.0" floor that would permit
+# the old v2 decorator-based client; don't repeat that here.
+anthropic>=0.117.0
+mcp>=1.28.1
+langfuse>=4.14.1,<5
+pydantic>=2.12.5
+python-dotenv>=1.0.0
+
+# The bonus tier's voice/LangGraph/CrewAI/Claude-Agent-SDK stretch goals
+# are NOT listed here - see bonus/README.md, which points at the repo
+# root's requirements.txt (langgraph, crewai, claude-agent-sdk) and
+# requirements-voice.txt (livekit + deepgram, installed SECOND per that
+# file's own conflict note).

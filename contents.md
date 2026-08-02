@@ -144,6 +144,8 @@ What learners build with, across the full week.
 
 *Labs:* H1 Banking → release-ready governance pack (agent card + audit + disclosure) · H2 Insurance → eval gate (resolution + safety) · H3 Team exercise → one-page capstone brief (problem, channels, metrics, eval plan)
 
+**Problem Statement 2:** `Capstone_Telecom_Omnichannel_Agent/` (repo root) — a third, cross-cutting capstone alongside the Day 4 and Day 5 ones above, synthesizing multi-agent teams (Day 2) with governed, idempotent MCP actions and layered injection defense (Day 4) under full Langfuse cost + quality observability (Day 5).
+
 ---
 
 ## Week 2 — Advanced & Capstone

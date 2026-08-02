@@ -103,7 +103,7 @@ def resolution_score(conversation: dict) -> int:
     building the scoring *pipeline* rather than the judge itself.
     """
     # YOUR CODE HERE
-    raise NotImplementedError
+    return 1 if conversation["expected_resolution"] else 0
 
 
 def trajectory_score(conversation: dict) -> float:
@@ -115,7 +115,7 @@ def trajectory_score(conversation: dict) -> float:
     happened) and return a score between 0.0 and 1.0.
 
     A simple, defensible approach:
-      - 1.0 if agent_actions == expected_actions exactly
+      - 1.0 if agent_actions == expected_actions exactlyz
       - 0.0 if any *required* action is missing, or the actions that
         ARE present are in the wrong order
       - Something in between (e.g. 0.85) if the agent did everything
@@ -125,7 +125,25 @@ def trajectory_score(conversation: dict) -> float:
     you choose so a teammate could apply it consistently.
     """
     # YOUR CODE HERE
-    raise NotImplementedError
+    actual = conversation["agent_actions"]
+    expected = conversation["expected_actions"]
+
+
+    if actual == expected:
+        return 1.0
+
+    missing = [a for a in expected if a not in actual]
+    if missing:
+        return 0.0
+
+    actual_required_order = list(dict.fromkeys(a for a in actual if a in expected))
+    if actual_required_order != expected:
+        return 0.0
+
+    extra_calls = len(actual) - len(expected)
+    penalty = min(0.15 * extra_calls, 0.3)
+
+    return round(1.0 - penalty, 2)
 
 
 def combined_score(res_score: int, traj_score: float) -> float:
@@ -137,7 +155,7 @@ def combined_score(res_score: int, traj_score: float) -> float:
     conversation that broke policy still score highly?).
     """
     # YOUR CODE HERE
-    raise NotImplementedError
+    return round(0.6 * res_score + 0.4 * traj_score, 2)
 
 
 # --- Given: LLM-as-judge + Langfuse tracing (no TODOs below) -------------
@@ -162,6 +180,8 @@ def llm_judge_score(golden: dict) -> JudgeVerdict:
     """Real Claude call grading the agent's final reply against the
     customer's message and the policy notes for this golden — a check no
     amount of static goldens.json fields can do on their own."""
+
+    
     prompt = f"""Customer said: "{golden['customer_message']}"
 Actions the agent actually took, in order: {golden['agent_actions']}
 Agent's final reply: "{golden['agent_final_message']}"

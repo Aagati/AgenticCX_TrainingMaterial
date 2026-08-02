@@ -195,3 +195,6 @@ memory_store.json
 # Voice lab audio (student-recorded WAVs / synthesized replies, not source)
 **/sample_audio/
 **/sample_audio_h3/
+
+# Capstone red-team instructor answer key — never share with candidates
+**/red_team_challenge_INSTRUCTOR_REFERENCE.py

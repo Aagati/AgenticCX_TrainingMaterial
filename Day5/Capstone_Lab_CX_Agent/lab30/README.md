@@ -232,7 +232,10 @@ core lab didn't have time for:
   `ask_grounded`, and inject it into the system prompt.
 - **Day 2 (Multi-agent):** split `ask_grounded` into a router that sends
   coverage questions to one persona and claim-status questions to another,
-  each with its own system prompt.
+  each with its own system prompt. (Built out fully, with real MCP tools
+  behind each persona and idempotent actions, in
+  `Capstone_Telecom_Omnichannel_Agent/` at the repo root — "Problem
+  Statement 2".)
 - **Day 3 (Latency):** wrap `ask_grounded` with `time.perf_counter()` calls
   and report time-to-first-token vs. total latency, the same distinction
   Part 1's timing bug in Day 3's lab was built to catch.

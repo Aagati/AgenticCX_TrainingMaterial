@@ -1,0 +1,20 @@
+{
+  "agent_roles": {
+    "supervisor": {
+      "allowed_tools": ["handoff"],
+      "limits": {}
+    },
+    "billing_agent": {
+      "allowed_tools": ["get_account", "list_charges", "search_kb", "apply_billing_credit"],
+      "limits": {"max_credit_cents": 5000}
+    },
+    "plans_agent": {
+      "allowed_tools": ["get_account", "search_kb", "change_plan"],
+      "limits": {"can_override_contract": false}
+    },
+    "tech_agent": {
+      "allowed_tools": ["get_account", "check_network_status", "search_kb", "create_service_ticket"],
+      "limits": {}
+    }
+  }
+}

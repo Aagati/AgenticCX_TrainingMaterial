@@ -208,3 +208,10 @@ that list in advance.
   narrative — including which layer blocked anything that got blocked.
 - Add a THIRD user to `entitlements.json` and a THIRD red-team doc of your
   own design, aimed at an attack technique not in this file at all.
+
+## Where this goes next
+`Capstone_Telecom_Omnichannel_Agent/` (repo root — "Problem Statement 2")
+extends this same MCP + entitlements + idempotency spine with a
+multi-agent supervisor/specialist team (Day 2), MCP-specific attack
+techniques (a confused-deputy attack across the handoff chain itself, not
+just a single tool), and Langfuse cost tracking (Day 5) on top of it.
