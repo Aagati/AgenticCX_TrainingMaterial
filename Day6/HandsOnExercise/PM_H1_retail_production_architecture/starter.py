@@ -1,22 +1,22 @@
 """
 PM · H1 — Retail: Production Architecture (STARTER)
 
-Fuses BOTH of AM_H1's paths (modular Claude pipeline + native Gemini Live)
-+ AM_H2 (affective/proactive config) + AM_H3 (tool calling + grounding +
-multimodal input) into one session class, then adds session resumption +
-a structured audit log. The modular path is a REAL streamed Claude call
-regardless of Gemini key status; the native path is real-if-key with a
-simulated fallback — same contract as every AM lab this morning.
+Fuses BOTH a modular pipeline path (fake_stt -> real streamed Claude call
+-> fake_tts) and a native Gemini Live path (affective/proactive config,
+tool calling, grounding, multimodal input) into one session class, then
+adds session resumption + a structured audit log. The modular path is a
+REAL streamed Claude call regardless of Gemini key status; the native
+path is real-if-key with a simulated fallback.
 
 This lab routes to modular UPFRONT based on what a turn needs (an
 architecture decision). PM_H3 routes to modular as a FAILOVER when native
 is unreachable (a reliability decision). Same two functions, different
 trigger, different topic.
 
-demo_am_recap() at the bottom (fully given, exercises your TODOs) is a
-standalone recap of AM_H1's timed pipeline-vs-native comparison and AM_H2's
-affect-on/off + proactive-check-in demos — the point is this lab is
-teachable on its own, without the morning session, once your TODOs pass.
+demo_capability_recap() at the bottom (fully given, exercises your TODOs)
+is a standalone recap of the timed pipeline-vs-native comparison and the
+affect-on/off + proactive-check-in demos — this lab is teachable entirely
+on its own once your TODOs pass.
 """
 
 import asyncio
@@ -81,8 +81,8 @@ def get_order_status(order_id: str) -> dict:
 
 
 def make_damaged_item_png(size: int = 64) -> bytes:
-    """Given — same pure-stdlib PNG generator as AM_H3, standing in for a
-    photo of a damaged item attached to a return request."""
+    """Given — pure-stdlib PNG generator, standing in for a photo of a
+    damaged item attached to a return request."""
     def chunk(chunk_type: bytes, data: bytes) -> bytes:
         return struct.pack(">I", len(data)) + chunk_type + data + struct.pack(
             ">I", zlib.crc32(chunk_type + data)
@@ -95,17 +95,17 @@ def make_damaged_item_png(size: int = 64) -> bytes:
 
 
 def fake_stt(text: str) -> str:
-    """Given — same simulated STT draw as AM_H1."""
+    """Given — simulated STT latency draw."""
     time.sleep(random.uniform(*STT_LATENCY_RANGE_MS) / 1000)
     return text
 
 
 def call_llm_streaming(transcript: str) -> str:
     """
-    TODO 0: A REAL streamed Claude call — AM_H1's exact shape. Use
+    TODO 0: A REAL streamed Claude call. Use
     client.messages.stream() as a context manager (model=CLAUDE_MODEL,
-    max_tokens=120, thinking={"type": "disabled"} — see AM_H1 for why
-    that matters at low max_tokens, system=a short retail-agent prompt,
+    max_tokens=120, thinking={"type": "disabled"} — low max_tokens leaves
+    no room for a thinking block, system=a short retail-agent prompt,
     messages=[{"role": "user", "content": transcript}]). Accumulate
     stream.text_stream into the full reply text and return it.
     """
@@ -123,15 +123,15 @@ def call_llm_streaming(transcript: str) -> str:
 
 
 def fake_tts(text: str) -> str:
-    """Given — same simulated TTS draw as AM_H1."""
+    """Given — simulated TTS first-byte latency draw."""
     time.sleep(random.uniform(*TTS_FIRST_BYTE_RANGE_MS) / 1000)
     return text
 
 
 def run_modular_turn(text: str) -> str:
-    """Given — AM_H1's 3-hop shape, reused here as the cost-routed path
-    for plain FAQ turns that don't need tools, grounding, or multimodal
-    input."""
+    """Given — 3-hop shape (fake_stt -> real streamed Claude -> fake_tts),
+    used here as the cost-routed path for plain FAQ turns that don't need
+    tools, grounding, or multimodal input."""
     transcript = fake_stt(text)
     reply = call_llm_streaming(transcript)
     fake_tts(reply)
@@ -163,16 +163,16 @@ class RetailSupportSession:
 
     def _build_config(self, enable_affect: bool = True, enable_proactive: bool = True):
         """
-        TODO 1: Build a LiveConnectConfig combining everything from this
-        morning: response_modalities=["AUDIO"], tools=[a Tool wrapping
-        GET_ORDER_STATUS_DECL, a Tool wrapping GoogleSearch()] (AM_H3), and
+        TODO 1: Build a LiveConnectConfig combining:
+        response_modalities=["AUDIO"], tools=[a Tool wrapping
+        GET_ORDER_STATUS_DECL, a Tool wrapping GoogleSearch()], and
         session_resumption=SessionResumptionConfig(handle=
-        self.resumption_handle) — this lab's own new piece. Then, IF
-        enable_affect, also set enable_affective_dialog=True (AM_H2); IF
-        enable_proactive, also set proactivity=ProactivityConfig(
-        proactive_audio=True) (AM_H2). The two params default True for the
-        main session — they exist so demo_am_recap() can toggle them off
-        to show AM_H2's on/off contrast without a second session class.
+        self.resumption_handle). Then, IF enable_affect, also set
+        enable_affective_dialog=True; IF enable_proactive, also set
+        proactivity=ProactivityConfig(proactive_audio=True). The two
+        params default True for the main session — they exist so
+        demo_capability_recap() can toggle them off to show the affect
+        on/off contrast without a second session class.
         """
         order_tool = genai_types.Tool(function_declarations=[GET_ORDER_STATUS_DECL])
         search_tool = genai_types.Tool(google_search=genai_types.GoogleSearch())
@@ -191,8 +191,8 @@ class RetailSupportSession:
     async def _run_turn_async(self, parts: list, image_bytes: bytes | None = None) -> str:
         """
         TODO 2: Open the session with self._build_config(). If image_bytes,
-        send it FIRST via send_realtime_input (AM_H3's multimodal pattern),
-        then send `parts` via send_client_content(turn_complete=True).
+        send it FIRST via send_realtime_input (the multimodal-image
+        pattern), then send `parts` via send_client_content(turn_complete=True).
         Iterate session.receive():
           - message.session_resumption_update — if .resumable, save
             .new_handle into self.resumption_handle and self._record(...).
@@ -246,8 +246,8 @@ class RetailSupportSession:
         (just build self._build_config(enable_affect, enable_proactive),
         open a session, send `text` as a single-part turn, collect
         model_turn text parts until turn_complete). Used only by
-        demo_am_recap() below to reproduce AM_H2's on/off contrast without
-        a second session class.
+        demo_capability_recap() below to reproduce the affect on/off
+        contrast without a second session class.
         """
         config = self._build_config(enable_affect=enable_affect, enable_proactive=enable_proactive)
         reply_parts = []
@@ -267,8 +267,8 @@ class RetailSupportSession:
 
     async def _listen_for_proactive_async(self, opening_text: str, timeout_s: float = 6.0) -> bool:
         """
-        TODO 7: AM_H2's silence-gap listen, ported here so this lab can
-        demonstrate proactive audio actually firing. build_config(
+        TODO 7: Silence-gap listen, so this lab can demonstrate proactive
+        audio actually firing. build_config(
         enable_affect=True, enable_proactive=True), open a session, send
         opening_text as a turn, drain the direct reply (loop receive()
         until turn_complete). THEN, with no further input, wrap another
@@ -389,8 +389,8 @@ class RetailSupportSession:
 
     async def _session_to_speaker(self, session, speaker_stream, stop_event):
         """
-        TODO 8: Play audio deltas as they arrive (not buffer-then-play,
-        unlike AM_H1's save-to-wav-at-the-end) and handle the two message
+        TODO 8: Play audio deltas as they arrive (not buffer-then-play-at-
+        the-end) and handle the two message
         types a text-only turn never produces:
           - message.tool_call — same pattern as _run_turn_async: for each
             function call, run get_order_status(**args) (or an
@@ -476,12 +476,11 @@ class RetailSupportSession:
         asyncio.run(self._voice_loop_async(duration_s))
 
 
-def demo_am_recap():
-    """Given — standalone recap of AM_H1's and AM_H2's core lessons,
-    ported into this lab so the whole day is teachable from PM labs alone.
+def demo_capability_recap():
+    """Given — standalone recap of this lab's core building-block lessons.
     Exercises the TODOs above; nothing new to fill in here."""
 
-    print("\n=== AM recap 1/3 — pipeline vs. native, timed (AM_H1) ===")
+    print("\n=== Recap 1/3 — pipeline vs. native, timed ===")
     text = "What's your standard shipping cutoff time for next-day delivery?"
 
     t0 = time.perf_counter()
@@ -504,7 +503,7 @@ def demo_am_recap():
     print(f"  native  (1-hop, {'real' if recap.real else 'simulated'}): {native_ms:.0f}ms")
     print(f"    {native_reply[:100]}")
 
-    print("\n=== AM recap 2/3 — affective dialogue on/off (AM_H2) ===")
+    print("\n=== Recap 2/3 — affective dialogue on/off ===")
     distressed = "This is SO frustrating — my package never arrived and nobody's helping me!"
     recap2 = RetailSupportSession()
     if recap2.real:
@@ -520,7 +519,7 @@ def demo_am_recap():
     print(f"  affect OFF: {off_reply[:120]}")
     print(f"  affect ON:  {on_reply[:120]}")
 
-    print("\n=== AM recap 3/3 — proactive audio check-in (AM_H2) ===")
+    print("\n=== Recap 3/3 — proactive audio check-in ===")
     recap3 = RetailSupportSession()
     if recap3.real:
         try:
@@ -552,4 +551,4 @@ if __name__ == "__main__":
 
     session.print_log()
 
-    demo_am_recap()
+    demo_capability_recap()

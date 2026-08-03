@@ -5,6 +5,17 @@ Build ONE graph shape and run it twice — once with a real Claude node,
 once with a Gemini node (real if GEMINI_API_KEY/GOOGLE_API_KEY is set, a
 duck-typed simulated model otherwise) — to make "Gemini vs. the modular
 stack" concrete: the model is a swappable node, the graph doesn't change.
+Scenario: banking customer checks balance (safe, read-only) and reports
+a lost card (irreversible — freeze it only after they confirm).
+
+Two more production concerns on top of the vendor-swap point:
+  - COST TIERING (build_tiered_graph) — the same graph shape again, but
+    the agent node decides with a cheap model and the execute node only
+    pays for a capable model on the path that touches freeze_card.
+  - HARDENED TOOL EXECUTION (_run_tool_call, freeze_card's idempotency
+    check, both given below) — an unknown tool name or a raised exception
+    degrades to a safe reply instead of crashing the graph, and freezing
+    an already-frozen card is a no-op, not a second "success."
 """
 
 import json
@@ -26,6 +37,7 @@ if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 CLAUDE_MODEL = "claude-sonnet-5"
+CLAUDE_CHEAP_MODEL = "claude-haiku-4-5-20251001"
 GEMINI_MODEL = "gemini-flash-latest"
 
 DATA_DIR = Path(__file__).parent
@@ -48,12 +60,30 @@ def get_account_info() -> dict:
 @tool
 def freeze_card() -> dict:
     """Freeze the caller's card immediately — use this when they report it lost or stolen."""
+    if ACCOUNT["card_status"] == "frozen":
+        # Given — idempotency guard: a retried or double-invoked freeze
+        # must not read as a fresh action — same request twice, same
+        # safe result.
+        return {"card_status": "frozen", "confirmation": "Card was already frozen — no action taken."}
     ACCOUNT["card_status"] = "frozen"
     return {"card_status": ACCOUNT["card_status"], "confirmation": "Card frozen successfully."}
 
 
 TOOLS = [get_account_info, freeze_card]
 TOOLS_BY_NAME = {t.name: t for t in TOOLS}
+
+
+def _run_tool_call(call: dict) -> tuple[dict | None, str | None]:
+    """Given — executes a tool call safely: (result, None) on success, or
+    (None, message) if the model asked for a tool that doesn't exist or
+    the tool itself raised. Both execute nodes route through this so the
+    hardening lives in one place instead of being duplicated per node."""
+    if call["name"] not in TOOLS_BY_NAME:
+        return None, f"Sorry, I can't do that ({call['name']} isn't a tool I have)."
+    try:
+        return TOOLS_BY_NAME[call["name"]].invoke(call.get("args", {})), None
+    except Exception as exc:
+        return None, f"Sorry, that action failed: {exc}"
 
 
 @dataclass
@@ -134,12 +164,15 @@ def make_agent_node(llm_with_tools):
 def make_execute_node(llm_with_tools):
     """
     TODO 2: Return a node function execute_node(state) that:
-      - pulls call = state["_pending_call"], runs
-        TOOLS_BY_NAME[call["name"]].invoke(call.get("args", {})) to get
-        `result`
-      - rebuilds the full message history: SystemMessage, HumanMessage
-        (original), AIMessage(content=state.get("_ai_content") or "",
-        tool_calls=[call]), ToolMessage(content=json.dumps(result),
+      - pulls call = state["_pending_call"], calls result, error =
+        _run_tool_call(call) — this given helper already handles an
+        unknown tool name or a raised exception, so you don't re-check
+        those here
+      - if error, return {"reply": error, "_pending_call": None}
+        immediately (skip the model call — there's nothing to follow up)
+      - otherwise, rebuilds the full message history: SystemMessage,
+        HumanMessage (original), AIMessage(content=state.get("_ai_content")
+        or "", tool_calls=[call]), ToolMessage(content=json.dumps(result),
         tool_call_id=call["id"])
       - calls llm_with_tools.invoke(messages) again for the natural-language
         follow-up
@@ -147,7 +180,36 @@ def make_execute_node(llm_with_tools):
     """
     def execute_node(state: ActionState) -> dict:
         call = state["_pending_call"]
-        result = TOOLS_BY_NAME[call["name"]].invoke(call.get("args", {}))
+        result, error = _run_tool_call(call)
+        if error:
+            return {"reply": error, "_pending_call": None}
+        messages = [
+            SystemMessage(SYSTEM_PROMPT),
+            HumanMessage(state["message"]),
+            AIMessage(content=state.get("_ai_content") or "", tool_calls=[call]),
+            ToolMessage(content=json.dumps(result), tool_call_id=call["id"]),
+        ]
+        follow_up = llm_with_tools.invoke(messages)
+        return {"reply": follow_up.content, "_pending_call": None}
+
+    return execute_node
+
+
+def make_tiered_execute_node(cheap_llm_with_tools, capable_llm_with_tools):
+    """
+    TODO 5: Cost-tiered execute node — same shape as make_execute_node's
+    execute_node, but before the follow-up call, pick which model answers
+    it: llm_with_tools = capable_llm_with_tools if call["name"] ==
+    "freeze_card" else cheap_llm_with_tools. Tool execution itself
+    (_run_tool_call) is identical either way — only the follow-up model
+    differs.
+    """
+    def execute_node(state: ActionState) -> dict:
+        call = state["_pending_call"]
+        result, error = _run_tool_call(call)
+        if error:
+            return {"reply": error, "_pending_call": None}
+        llm_with_tools = capable_llm_with_tools if call["name"] == "freeze_card" else cheap_llm_with_tools
         messages = [
             SystemMessage(SYSTEM_PROMPT),
             HumanMessage(state["message"]),
@@ -192,7 +254,26 @@ def build_action_graph(llm_with_tools):
     return builder.compile()
 
 
+def build_tiered_graph(cheap_llm_with_tools, capable_llm_with_tools):
+    """
+    TODO 6: Same wiring as build_action_graph, but: add_node("agent",
+    make_agent_node(cheap_llm_with_tools)) — deciding which tool to call
+    is a cheap classification task, no need for the capable model there —
+    and add_node("execute", make_tiered_execute_node(cheap_llm_with_tools,
+    capable_llm_with_tools)). Same entry point, conditional edges, and
+    final edge as build_action_graph.
+    """
+    builder = StateGraph(ActionState)
+    builder.add_node("agent", make_agent_node(cheap_llm_with_tools))
+    builder.add_node("execute", make_tiered_execute_node(cheap_llm_with_tools, capable_llm_with_tools))
+    builder.set_entry_point("agent")
+    builder.add_conditional_edges("agent", route_after_agent, {"execute": "execute", "end": END})
+    builder.add_edge("execute", END)
+    return builder.compile()
+
+
 claude_llm = ChatAnthropic(model=CLAUDE_MODEL, max_tokens=200).bind_tools(TOOLS)
+claude_cheap_llm = ChatAnthropic(model=CLAUDE_CHEAP_MODEL, max_tokens=200).bind_tools(TOOLS)
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from _vertex_client import get_gemini_chat_model
@@ -202,6 +283,7 @@ _gemini_key = not isinstance(gemini_llm, SimulatedGeminiModel)
 
 claude_graph = build_action_graph(claude_llm)
 gemini_graph = build_action_graph(gemini_llm)
+tiered_graph = build_tiered_graph(claude_cheap_llm, claude_llm)
 
 
 def demo(label: str, graph):
@@ -226,3 +308,10 @@ if __name__ == "__main__":
     demo("Claude node (real)", claude_graph)
     ACCOUNT["card_status"] = "active"  # reset the shared fixture between demos
     demo(f"Gemini node ({'real' if _gemini_key else 'simulated'})", gemini_graph)
+    ACCOUNT["card_status"] = "active"
+    demo("Cost-tiered (haiku decides + reads, sonnet executes freeze_card)", tiered_graph)
+
+    print("\n=== Idempotency check — freezing an already-frozen card ===")
+    repeat = claude_graph.invoke({"message": "I lost my card, please freeze it.", "confirmed": True})
+    print(f"Agent: {repeat['reply']}")
+    print(f"[card_status still: {ACCOUNT['card_status']}]")

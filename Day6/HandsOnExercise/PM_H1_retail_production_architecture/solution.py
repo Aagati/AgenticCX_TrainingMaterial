@@ -1,37 +1,55 @@
 """
 PM · H1 — Retail: Production Architecture (REFERENCE SOLUTION)
 
-Fuses this morning's three labs into one production-shaped session class,
-the same fusion move Day 3's PM·H1 made — and this includes BOTH of AM_H1's
-paths, not just native audio:
-  - AM_H1's modular pipeline (fake_stt -> REAL streamed Claude call ->
-    fake_tts) AND its native-audio Live connection — routed between by
+One production-shaped session class (`RetailSupportSession`) fusing five
+concepts, all exercised together on one retail-support scenario:
+  - a modular pipeline (fake_stt -> REAL streamed Claude call -> fake_tts)
+    AND a native-audio Gemini Live connection — routed between by
     `_needs_native()`, a genuine production-architecture decision: a plain
     FAQ turn doesn't need a full native-audio session with tools and
     grounding bound to it, so it's cheaper to route it through the light
     modular/Claude path and reserve the native session for turns that
     actually need multimodal input or a tool call.
-  - AM_H2's affective dialogue + proactive audio config, on by default for
-    the native path
-  - AM_H3's function calling (order lookup), Google Search grounding, and
+  - affective dialogue + proactive audio config, on by default for the
+    native path
+  - function calling (order lookup), Google Search grounding, and
     multimodal image input (a photo of a damaged item for a return)
-...and adds this lab's own topic — PRODUCTION ARCHITECTURE:
+...and this lab's own topic — PRODUCTION ARCHITECTURE:
   - session resumption: capture the server's resumption handle and use it
     to reconnect after a simulated dropped connection instead of starting
     the conversation over
-  - a structured, append-only session log (this day's version of the
-    audit-trail thread Day 4/5 built for compliance and eval)
+  - a structured, append-only session log for audit/eval
 
-NOTE on the two "same idea, different job" pieces this day builds: this
-lab routes to the modular path UPFRONT based on what the request needs
-(an architecture decision, made before anything fails). PM_H3 routes to
-the modular path as a FAILOVER when native is unreachable (a reliability
-decision, made after something fails). Same two functions, different
-trigger, different topic.
+NOTE on a "same idea, different job" contrast worth teaching alongside
+PM_H3: this lab routes to the modular path UPFRONT based on what the
+request needs (an architecture decision, made before anything fails).
+PM_H3 routes to the modular path as a FAILOVER when native is unreachable
+(a reliability decision, made after something fails). Same two functions,
+different trigger, different topic.
 
-demo_am_recap() at the bottom reproduces AM_H1's timed pipeline-vs-native
-comparison and AM_H2's affect-on/off + proactive-check-in demos standalone
-— this lab is teachable on its own, without the morning session.
+See the CONCEPT CHEATSHEET below for a quick index of where each piece
+lives in this file. demo_capability_recap() at the bottom runs three short
+standalone demos (pipeline-vs-native latency, affect on/off, proactive
+audio) so the whole set of concepts is visible without running the main
+scenario first.
+
+CONCEPT CHEATSHEET
+-------------------------------------------------------------------------
+| Concept                    | Where                                    |
+|-----------------------------|------------------------------------------|
+| Modular pipeline turn       | run_modular_turn() / call_llm_streaming()|
+| Native Live session turn    | RetailSupportSession._run_turn_async()   |
+| Cost/capability routing     | RetailSupportSession._needs_native()     |
+| Affective dialogue          | _build_config(enable_affect=...)         |
+| Proactive audio             | _build_config(enable_proactive=...)      |
+| Function calling (tool)     | GET_ORDER_STATUS_DECL / tool_call handling|
+| Search grounding            | genai_types.Tool(google_search=...)      |
+| Multimodal image input      | send_realtime_input(media=Blob(...))     |
+| Session resumption          | resumption_handle / session_resumption_update|
+| Structured audit log        | RetailSupportSession._record() / log     |
+| Reconnect-without-restart   | simulate_dropped_connection_and_reconnect()|
+| Real duplex voice (opt-in)  | run_live_voice_demo() / --voice flag     |
+-------------------------------------------------------------------------
 """
 
 import asyncio
@@ -59,7 +77,7 @@ CLAUDE_MODEL = "claude-sonnet-5"
 STT_LATENCY_RANGE_MS = (120, 220)
 TTS_FIRST_BYTE_RANGE_MS = (60, 100)
 
-MULTIMODAL_LIVE_MODEL = "gemini-3.1-flash-live-preview"
+MULTIMODAL_LIVE_MODEL = "gemini-3.1-flash-live-preview" #model=gemini-3.1-flash-preview
 
 # Optional --voice flow only: real mic-in/speaker-out duplex loop, as a
 # contrast to every other turn in this lab (which sends TEXT and, on the
@@ -96,8 +114,8 @@ def get_order_status(order_id: str) -> dict:
 
 
 def make_damaged_item_png(size: int = 64) -> bytes:
-    """Given — same pure-stdlib PNG generator as AM_H3, standing in for a
-    photo of a damaged item attached to a return request."""
+    """Given — pure-stdlib PNG generator, standing in for a photo of a
+    damaged item attached to a return request."""
     def chunk(chunk_type: bytes, data: bytes) -> bytes:
         return struct.pack(">I", len(data)) + chunk_type + data + struct.pack(
             ">I", zlib.crc32(chunk_type + data)
@@ -115,12 +133,12 @@ def fake_stt(text: str) -> str:
 
 
 def call_llm_streaming(transcript: str) -> str:
-    """Real streamed Claude call — AM_H1's exact call shape."""
+    """Real streamed Claude call."""
     chunks = []
     with anthropic_client.messages.stream(
         model=CLAUDE_MODEL,
         max_tokens=120,
-        thinking={"type": "disabled"},  # see AM_H1 for why this matters at low max_tokens
+        thinking={"type": "disabled"},  # low max_tokens leaves no room for a thinking block
         system="You are a retail support agent. Reply in short, natural sentences.",
         messages=[{"role": "user", "content": transcript}],
     ) as stream:
@@ -135,7 +153,7 @@ def fake_tts(text: str) -> str:
 
 
 def run_modular_turn(text: str) -> str:
-    """AM_H1's 3-hop shape (fake_stt -> real streamed Claude -> fake_tts),
+    """3-hop shape (fake_stt -> real streamed Claude -> fake_tts),
     reused here as PM_H1's cost-routed path for plain FAQ turns that don't
     need tools, grounding, or multimodal input — no reason to pay for a
     full native-audio Live session just to answer a return-policy question."""
@@ -178,8 +196,9 @@ class RetailSupportSession:
             "session_resumption": genai_types.SessionResumptionConfig(handle=self.resumption_handle),
         }
         # enable_affect/enable_proactive default True for the main session —
-        # the two knobs exist so demo_am_recap() below can toggle them off
-        # to show AM_H2's on/off contrast without a second session class.
+        # the two knobs exist so demo_capability_recap() below can toggle
+        # them off to show the affect on/off contrast without a second
+        # session class.
         if enable_affect:
             kwargs["enable_affective_dialog"] = True
         if enable_proactive:
@@ -224,8 +243,9 @@ class RetailSupportSession:
 
     async def _run_bare_turn_async(self, text: str, enable_affect: bool, enable_proactive: bool) -> str:
         """Like _run_turn_async but with affect/proactivity toggleable and
-        no tool/multimodal handling — used only by demo_am_recap() below to
-        reproduce AM_H2's on/off contrast without a second session class."""
+        no tool/multimodal handling — used only by demo_capability_recap()
+        below to reproduce the affect on/off contrast without a second
+        session class."""
         config = self._build_config(enable_affect=enable_affect, enable_proactive=enable_proactive)
         reply_parts = []
         async with genai_client.aio.live.connect(model=MULTIMODAL_LIVE_MODEL, config=config) as session:
@@ -243,9 +263,10 @@ class RetailSupportSession:
         return "".join(reply_parts) or "(audio-only reply)"
 
     async def _listen_for_proactive_async(self, opening_text: str, timeout_s: float = 6.0) -> bool:
-        """AM_H2's silence-gap listen, ported here so this lab can
-        demonstrate proactive audio actually firing, not just enable the
-        config flag and hope."""
+        """Silence-gap listen: opens a session, sends one turn, then keeps
+        listening past turn_complete to see if the model volunteers an
+        unprompted check-in — proves proactive audio actually firing, not
+        just the config flag being enabled and hoping."""
         config = self._build_config(enable_affect=True, enable_proactive=True)
         async with genai_client.aio.live.connect(model=MULTIMODAL_LIVE_MODEL, config=config) as session:
             await session.send_client_content(turns={"parts": [{"text": opening_text}]}, turn_complete=True)
@@ -340,8 +361,8 @@ class RetailSupportSession:
             )
 
     async def _session_to_speaker(self, session, speaker_stream, stop_event):
-        """Plays audio deltas as they arrive (not buffer-then-play, unlike
-        AM_H1's save-to-wav-at-the-end) and handles what a live call adds over
+        """Plays audio deltas as they arrive (not buffer-then-play-at-the-end)
+        and handles what a live call adds over
         a single text turn: tool_call (same get_order_status path as
         _run_turn_async) and interrupted (the customer started talking while
         the agent was still speaking — flush playback immediately or the
@@ -414,12 +435,11 @@ class RetailSupportSession:
         asyncio.run(self._voice_loop_async(duration_s))
 
 
-def demo_am_recap():
-    """Standalone recap of AM_H1's and AM_H2's core lessons, ported into
-    this lab so the whole day is teachable from PM labs alone — none of
-    this depends on anything the main scenario above already ran."""
+def demo_capability_recap():
+    """Standalone recap of this lab's core building-block lessons — none
+    of this depends on anything the main scenario above already ran."""
 
-    print("\n=== AM recap 1/3 — pipeline vs. native, timed (AM_H1) ===")
+    print("\n=== Recap 1/3 — pipeline vs. native, timed ===")
     text = "What's your standard shipping cutoff time for next-day delivery?"
 
     t0 = time.perf_counter()
@@ -442,7 +462,7 @@ def demo_am_recap():
     print(f"  native  (1-hop, {'real' if recap.real else 'simulated'}): {native_ms:.0f}ms")
     print(f"    {native_reply[:100]}")
 
-    print("\n=== AM recap 2/3 — affective dialogue on/off (AM_H2) ===")
+    print("\n=== Recap 2/3 — affective dialogue on/off ===")
     distressed = "This is SO frustrating — my package never arrived and nobody's helping me!"
     recap2 = RetailSupportSession()
     if recap2.real:
@@ -458,7 +478,7 @@ def demo_am_recap():
     print(f"  affect OFF: {off_reply[:120]}")
     print(f"  affect ON:  {on_reply[:120]}")
 
-    print("\n=== AM recap 3/3 — proactive audio check-in (AM_H2) ===")
+    print("\n=== Recap 3/3 — proactive audio check-in ===")
     recap3 = RetailSupportSession()
     if recap3.real:
         try:
@@ -490,7 +510,7 @@ if __name__ == "__main__":
 
     session.print_log()
 
-    demo_am_recap()
+    demo_capability_recap()
 
 # Expected: turn 1 (mentions ORD-4471) routes "native", triggers a
 # "tool_call" log entry for get_order_status (real or simulated) resolving
@@ -501,7 +521,7 @@ if __name__ == "__main__":
 # set — this is the one path in this lab that's never simulated. Turn 4
 # ("...today?") routes "native" on the grounding-hint match and exercises
 # the google_search tool (real citations only with a real key — simulation
-# can't fabricate those, same as AM_H3). Between turns 4 and 5,
+# can't fabricate those). Between turns 4 and 5,
 # simulate_dropped_connection_and_reconnect() logs "connection_dropped" ->
 # "reconnect_attempt" -> "reconnected", with using_saved_handle=True ONLY
 # if a real native session ever returned a session_resumption_update — in
@@ -510,7 +530,6 @@ if __name__ == "__main__":
 # (mentions ORD-4471 again) routes "native" so the resumption path
 # actually gets exercised, not silently skipped by the modular route.
 #
-# demo_am_recap() then reproduces AM_H1's timed modular-vs-native
-# comparison and AM_H2's affect-on/off + proactive-check-in demonstrations
-# standalone, so an instructor can teach this lab without the morning
-# session ever having run.
+# demo_capability_recap() then reproduces the timed modular-vs-native
+# comparison and the affect-on/off + proactive-check-in demonstrations
+# standalone, so this lab is teachable entirely on its own.
