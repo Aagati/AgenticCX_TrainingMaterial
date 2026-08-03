@@ -1,5 +1,5 @@
 """
-PM · H2 — Banking: Tooling & Actions via LangGraph (REFERENCE SOLUTION)
+LAB-2 => Banking: Tooling & Actions via LangGraph. 
 
 This lab builds a "tool the model decides to call" shape as a LangGraph
 StateGraph with a confirm-gate on the irreversible action (freeze_card) —

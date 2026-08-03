@@ -1,0 +1,112 @@
+[
+  {
+    "customer_id": "CUST-001",
+    "name": "Maria Chen",
+    "balance": 42.18,
+    "days_until_payment_due": 2,
+    "fraud_flag": false,
+    "preferred_channel": "sms",
+    "consent": {"sms": true, "voice": true, "email": true},
+    "timezone_offset_hours": -5,
+    "last_contacted_days_ago": 12
+  },
+  {
+    "customer_id": "CUST-002",
+    "name": "Devon Walsh",
+    "balance": 3210.55,
+    "days_until_payment_due": 20,
+    "fraud_flag": true,
+    "preferred_channel": "voice",
+    "consent": {"sms": true, "voice": true, "email": true},
+    "timezone_offset_hours": 0,
+    "last_contacted_days_ago": 1
+  },
+  {
+    "customer_id": "CUST-003",
+    "name": "Priya Nair",
+    "balance": 15.90,
+    "days_until_payment_due": 1,
+    "fraud_flag": false,
+    "preferred_channel": "email",
+    "consent": {"sms": false, "voice": false, "email": true},
+    "timezone_offset_hours": -8,
+    "last_contacted_days_ago": 9
+  },
+  {
+    "customer_id": "CUST-004",
+    "name": "Sam Okafor",
+    "balance": 980.00,
+    "days_until_payment_due": 25,
+    "fraud_flag": false,
+    "preferred_channel": "sms",
+    "consent": {"sms": true, "voice": true, "email": true},
+    "timezone_offset_hours": -5,
+    "last_contacted_days_ago": 2
+  },
+  {
+    "customer_id": "CUST-005",
+    "name": "Elena Petrova",
+    "balance": 5.42,
+    "days_until_payment_due": 3,
+    "fraud_flag": false,
+    "preferred_channel": "sms",
+    "consent": {"sms": true, "voice": true, "email": true},
+    "timezone_offset_hours": 1,
+    "last_contacted_days_ago": 30
+  },
+  {
+    "customer_id": "CUST-006",
+    "name": "Jordan Ferreira",
+    "balance": 640.00,
+    "days_until_payment_due": 30,
+    "fraud_flag": false,
+    "preferred_channel": "email",
+    "consent": {"sms": true, "voice": false, "email": true},
+    "timezone_offset_hours": -5,
+    "last_contacted_days_ago": 6
+  },
+  {
+    "customer_id": "CUST-007",
+    "name": "Aiko Tanaka",
+    "balance": 27.30,
+    "days_until_payment_due": 2,
+    "fraud_flag": false,
+    "preferred_channel": "sms",
+    "consent": {"sms": false, "voice": false, "email": false},
+    "timezone_offset_hours": 9,
+    "last_contacted_days_ago": 15
+  },
+  {
+    "customer_id": "CUST-008",
+    "name": "Liam O'Rourke",
+    "balance": 1150.00,
+    "days_until_payment_due": 18,
+    "fraud_flag": true,
+    "preferred_channel": "voice",
+    "consent": {"sms": true, "voice": true, "email": true},
+    "timezone_offset_hours": -2,
+    "last_contacted_days_ago": 7
+  },
+  {
+    "customer_id": "CUST-009",
+    "name": "Noah Kim",
+    "balance": 20.00,
+    "days_until_payment_due": 1,
+    "fraud_flag": false,
+    "preferred_channel": "sms",
+    "consent": {"sms": true, "voice": true, "email": true},
+    "timezone_offset_hours": 10,
+    "last_contacted_days_ago": 20
+  },
+  {
+    "customer_id": "CUST-010",
+    "name": "Grace Ibe",
+    "balance": 5000.00,
+    "days_until_payment_due": 2,
+    "fraud_flag": false,
+    "preferred_channel": "sms",
+    "consent": {"sms": true, "voice": true, "email": true},
+    "timezone_offset_hours": -5,
+    "last_contacted_days_ago": 15
+  }
+]

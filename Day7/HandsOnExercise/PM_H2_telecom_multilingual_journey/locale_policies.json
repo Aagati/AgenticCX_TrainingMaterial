@@ -1,0 +1,37 @@
+{
+  "en-US": {
+    "language_name": "English",
+    "tone": "friendly and casual, first-name basis, contractions are fine",
+    "disclosure_text": "This conversation may be recorded for quality purposes.",
+    "date_format": "MM/DD/YYYY",
+    "currency_symbol": "$"
+  },
+  "es-MX": {
+    "language_name": "Spanish",
+    "tone": "warm and respectful, use the formal 'usted' form, no slang",
+    "disclosure_text": "Aviso: esta conversacion puede ser grabada con fines de calidad.",
+    "date_format": "DD/MM/YYYY",
+    "currency_symbol": "MX$"
+  },
+  "ja-JP": {
+    "language_name": "Japanese",
+    "tone": "highly formal and polite, avoid contractions and casual phrasing",
+    "disclosure_text": "このやり取りは品質向上のため録音される場合があります。",
+    "date_format": "YYYY/MM/DD",
+    "currency_symbol": "¥"
+  },
+  "de-DE": {
+    "language_name": "German",
+    "tone": "formal and precise, use the 'Sie' form, get to the point quickly",
+    "disclosure_text": "Hinweis: Dieses Gespraech kann zu Qualitaetszwecken aufgezeichnet werden.",
+    "date_format": "DD.MM.YYYY",
+    "currency_symbol": "€"
+  },
+  "pt-BR": {
+    "language_name": "Portuguese",
+    "tone": "warm and moderately formal, friendly but not overly casual",
+    "disclosure_text": "Aviso: esta conversa pode ser gravada para fins de qualidade.",
+    "date_format": "DD/MM/YYYY",
+    "currency_symbol": "R$"
+  }
+}

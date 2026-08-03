@@ -182,6 +182,18 @@ rather than as its own lab, the same treatment Day 3 gave "build vs. buy."
 Proactive & outbound agents · Multilingual & localisation · Journey orchestration · Personalisation ·
 Consent, compliance & brand safety · Measuring proactive value · Outbound orchestration · Memory
 across the journey · Localised personas · Safety rails · Hand-off · Analytics hooks
+
+**Production-shaped only (no separate AM/hands-on tier this day — every
+lab goes straight to the PM_H* applied-lab pattern):**
+*PM* H1 Banking (outbound & proactive orchestration — eligibility gate,
+cost/channel-tiered drafting, measuring proactive value) · H2 Telecom
+(multilingual journeys — locale personas, cross-channel memory, hand-off)
+· H3 Insurance (consent, compliance & brand safety — outbound consent
+gate, brand-safety linter, self-paced assignment) · H4 Retail (capstone —
+personalised outbound journey agent, fuses H1-H3 + personalisation)
+See `Day7/HandsOnExercise/README.md` and `Day7_Notes.md` for the full
+breakdown. Facilitator pacing: H1/H2 led live, H3 self-paced, H4 the
+combine-all capstone.
  
 ### Day 8 — CX Analytics, Personalisation & Continuous Improvement
 **Major topics:**

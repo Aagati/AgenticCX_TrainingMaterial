@@ -1,0 +1,15 @@
+{
+  "banned_phrases": [
+    "guaranteed payout",
+    "guaranteed approval",
+    "risk-free",
+    "100% covered",
+    "no questions asked",
+    "always approved"
+  ],
+  "required_disclosures": {
+    "renewal_reminder": "Coverage details are subject to your policy terms and conditions.",
+    "claim_status_update": "This update does not constitute a final claim decision."
+  },
+  "consent_freshness_days": 365
+}

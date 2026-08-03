@@ -1,0 +1,32 @@
+{
+  "CUST-101": {
+    "name": "Rosa Alvarez",
+    "channel_opt_in": {"sms": true, "email": true, "voice": true},
+    "do_not_contact": false,
+    "consent_captured_at": "2026-03-10"
+  },
+  "CUST-102": {
+    "name": "Ben Whitfield",
+    "channel_opt_in": {"sms": false, "email": true, "voice": true},
+    "do_not_contact": false,
+    "consent_captured_at": "2026-01-05"
+  },
+  "CUST-103": {
+    "name": "Yuki Sato",
+    "channel_opt_in": {"sms": true, "email": true, "voice": false},
+    "do_not_contact": false,
+    "consent_captured_at": "2024-05-01"
+  },
+  "CUST-104": {
+    "name": "Karim Haddad",
+    "channel_opt_in": {"sms": true, "email": true, "voice": true},
+    "do_not_contact": true,
+    "consent_captured_at": "2025-11-20"
+  },
+  "CUST-105": {
+    "name": "Nadia Popescu",
+    "channel_opt_in": {"sms": true, "email": true, "voice": true},
+    "do_not_contact": false,
+    "consent_captured_at": "2026-06-15"
+  }
+}

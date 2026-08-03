@@ -1,0 +1,31 @@
+{
+  "segments": {
+    "loyalty_gold": {
+      "offer_text": "15% off your next purchase plus free shipping",
+      "discount_pct": 15
+    },
+    "new_customer": {
+      "offer_text": "10% off your first order",
+      "discount_pct": 10
+    },
+    "standard": {
+      "offer_text": "5% off your next purchase",
+      "discount_pct": 5
+    }
+  },
+  "channel_tiers": {
+    "sms": {"cost_units": 1, "quiet_hours": [21, 8]},
+    "email": {"cost_units": 1, "quiet_hours": [22, 6]}
+  },
+  "frequency_cap_days": 7,
+  "banned_phrases": [
+    "guaranteed lowest price",
+    "no risk",
+    "everyone qualifies",
+    "unlimited discount"
+  ],
+  "required_disclosure": "Offer valid while supplies last; exclusions may apply.",
+  "baseline_conversion_rates": {
+    "win_back": {"control": 0.08, "if_contacted": 0.26}
+  }
+}

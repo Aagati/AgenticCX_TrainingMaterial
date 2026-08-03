@@ -1,0 +1,22 @@
+{
+  "triggers": {
+    "payment_due_soon": {
+      "description": "Payment due within 3 days — urgency depends on whether the balance looks likely to cover it",
+      "match": {"days_until_payment_due_lte": 3}
+    },
+    "fraud_alert": {
+      "description": "Suspicious activity flagged on the account",
+      "match": {"fraud_flag": true}
+    }
+  },
+  "channel_tiers": {
+    "sms": {"tier": "cheap", "cost_units": 1, "quiet_hours": [21, 8]},
+    "email": {"tier": "cheap", "cost_units": 1, "quiet_hours": [22, 6]},
+    "voice": {"tier": "expensive", "cost_units": 8, "quiet_hours": [20, 9]}
+  },
+  "frequency_cap_days": 5,
+  "baseline_conversion_rates": {
+    "payment_due_soon": {"control": 0.18, "if_contacted": 0.52},
+    "fraud_alert": {"control": 0.40, "if_contacted": 0.88}
+  }
+}
