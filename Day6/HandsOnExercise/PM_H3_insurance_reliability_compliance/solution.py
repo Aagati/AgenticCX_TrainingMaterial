@@ -1,23 +1,44 @@
 """
 PM · H3 — Insurance: Latency & Reliability + Compliance (REFERENCE SOLUTION)
 
-Compounds on the whole day:
-  - PM_H1's session/reconnect machinery, extended with a REAL fallback
-    target: when Gemini Live is genuinely unreachable (not just dropped-
-    and-resumed), fail over to AM_H1's 3-hop MODULAR pipeline instead of
-    the call dying. AM_H1's "pipeline vs. native" comparison stops being a
-    teaching exercise and becomes an actual reliability decision.
-  - AM_H2's proactive audio — an unprompted agent turn is logged with a
-    distinct agent_initiated=True tag, because for compliance "who spoke
-    first" is a fact, not a UI detail.
-  - AM_H3's multimodal input — an attached image is logged as a REDACTED
-    reference (hash + size), never raw bytes, same minimum-necessary-data
-    principle Day 4 built guardrails around.
-  - Day 3 PM_H3's disclosure/consent/erasure compliance-gate SHAPE,
-    unchanged, insurance-flavored here.
-Plus this lab's own new topic: interruption/barge-in handling (Day 3
-AM_H2's InterruptionManager, reused as-is — barge-in is a reliability
-concern independent of which vendor's Live API is underneath).
+The day's capstone: one insurance claims call, six production concerns,
+one call_log:
+  - RELIABILITY FAILOVER — native audio is tried first; ANY failure (a
+    real exception or a simulated "unreachable" draw) drops to a 3-hop
+    MODULAR pipeline instead of the call dying, and every turn is timed
+    and logged with which path served it.
+  - PROACTIVE-TURN ATTRIBUTION — an unprompted agent turn is logged with
+    a distinct agent_initiated=True tag, because for compliance "who
+    spoke first" is a fact, not a UI detail.
+  - MULTIMODAL REDACTION — an attached image is logged as a redacted
+    reference (hash + size), never raw bytes — minimum-necessary-data,
+    not maximum-convenience.
+  - DISCLOSURE / CONSENT / ERASURE — a compliance gate that wraps every
+    customer turn, unchanged in shape regardless of which pipeline
+    answers it.
+  - INTERRUPTION / BARGE-IN — a customer talking over the agent cancels
+    playback immediately, independent of which vendor's Live API is
+    underneath.
+  - CALL SUMMARY — a closing aggregation of the whole log into one
+    reliability + compliance report.
+
+See the CONCEPT CHEATSHEET below for a quick index of where each piece
+lives in this file.
+
+CONCEPT CHEATSHEET
+-------------------------------------------------------------------------
+| Concept                       | Where                                  |
+|--------------------------------|------------------------------------------|
+| Native-first reliability failover | run_resilient_turn() / _try_connect_native() |
+| Per-turn latency instrumentation | run_resilient_turn()'s timing around each path |
+| Modular fallback pipeline     | run_modular_fallback_turn() / call_llm_streaming() |
+| AI disclosure + consent       | disclose_ai() / request_recording_consent() / record_consent_response() |
+| Multimodal image redaction    | redact_image_ref()                     |
+| In-call erasure gate          | check_erasure_request() / handle_customer_turn() |
+| Proactive-turn attribution    | log_agent_turn(agent_initiated=True)   |
+| Barge-in / interruption       | InterruptionManager / demo_barge_in()  |
+| Reliability+compliance summary | summarize_call()                      |
+-------------------------------------------------------------------------
 """
 
 import asyncio
@@ -71,8 +92,8 @@ if genai_client is None:
 
 
 # ---------------------------------------------------------------------
-# Modular fallback pipeline — AM_H1's shape, reused as a deployable
-# failover target rather than a side-by-side comparison.
+# Modular fallback pipeline — a deployable failover target, not just a
+# side-by-side comparison.
 # ---------------------------------------------------------------------
 
 def fake_stt(user_utterance: str) -> str:
@@ -136,26 +157,33 @@ async def _try_connect_native(user_utterance: str) -> dict:
 
 def run_resilient_turn(user_utterance: str, call_log: list) -> dict:
     """Try native audio; fail over to the modular pipeline on ANY failure
-    (including a simulated unreachable draw), and log which path actually
-    served the turn — same reliability-reporting discipline Day 3's PM_H2
-    used for STT primary/fallback."""
+    (including a simulated unreachable draw). Times and logs which path
+    actually served the turn — latency is what justifies caring about
+    failover in the first place, so it's not optional instrumentation."""
     if genai_client is not None and random.random() > LIVE_CONNECT_FAIL_RATE:
+        t0 = time.perf_counter()
         try:
             native = asyncio.run(_try_connect_native(user_utterance))
-            call_log.append({"event": "turn_served", "path": "native", "audio_path": native["audio_path"]})
-            return {"reply": native["reply"], "path": "native", "audio_path": native["audio_path"]}
+            latency_ms = round((time.perf_counter() - t0) * 1000)
+            call_log.append({
+                "event": "turn_served", "path": "native",
+                "latency_ms": latency_ms, "audio_path": native["audio_path"],
+            })
+            return {"reply": native["reply"], "path": "native", "audio_path": native["audio_path"], "latency_ms": latency_ms}
         except Exception as exc:
             call_log.append({"event": "native_failed", "error": str(exc)})
 
     call_log.append({"event": "failover_to_modular"})
+    t0 = time.perf_counter()
     reply = run_modular_fallback_turn(user_utterance)
-    call_log.append({"event": "turn_served", "path": "modular"})
-    return {"reply": reply, "path": "modular", "audio_path": None}
+    latency_ms = round((time.perf_counter() - t0) * 1000)
+    call_log.append({"event": "turn_served", "path": "modular", "latency_ms": latency_ms})
+    return {"reply": reply, "path": "modular", "audio_path": None, "latency_ms": latency_ms}
 
 
 # ---------------------------------------------------------------------
-# Compliance gate — Day 3 PM_H3's shape, insurance-flavored, extended for
-# multimodal redaction and proactive-audio attribution.
+# Compliance gate — disclosure/consent/erasure, extended for multimodal
+# redaction and proactive-audio attribution.
 # ---------------------------------------------------------------------
 
 def redact_image_ref(image_bytes: bytes) -> dict:
@@ -205,7 +233,7 @@ def handle_customer_turn(call_log: list, transcript: str, image_bytes: bytes | N
 
 
 # ---------------------------------------------------------------------
-# Barge-in — Day 3 AM_H2's InterruptionManager, reused as-is.
+# Barge-in — InterruptionManager cancels playback immediately on VAD.
 # ---------------------------------------------------------------------
 
 async def simulate_tts_playback(text: str, chunk_delay: float = 0.15):
@@ -251,6 +279,38 @@ async def demo_barge_in(call_log: list):
         print("    [CONFIRMED] playback stopped immediately")
 
 
+# ---------------------------------------------------------------------
+# Call summary — aggregates the log into one reliability + compliance
+# report, built entirely from events already written above.
+# ---------------------------------------------------------------------
+
+def summarize_call(call_log: list) -> dict:
+    """The artifact an audit or an on-call reliability review would
+    actually want: path split, latency per path, native failure count,
+    and the compliance flags, all read back out of call_log."""
+    served = [e for e in call_log if e["event"] == "turn_served"]
+    by_path = {"native": [], "modular": []}
+    for e in served:
+        by_path[e["path"]].append(e["latency_ms"])
+
+    def _avg(latencies):
+        return round(sum(latencies) / len(latencies)) if latencies else None
+
+    consent_entry = next((e for e in call_log if e["event"] == "recording_consent"), None)
+
+    return {
+        "turns_served": len(served),
+        "path_split": {path: len(latencies) for path, latencies in by_path.items()},
+        "avg_latency_ms": {path: _avg(latencies) for path, latencies in by_path.items()},
+        "max_latency_ms": {path: (max(latencies) if latencies else None) for path, latencies in by_path.items()},
+        "native_failures": sum(1 for e in call_log if e["event"] == "native_failed"),
+        "disclosure_given": any(e["event"] == "disclosure_given" for e in call_log),
+        "recording_consent_granted": consent_entry["granted"] if consent_entry else None,
+        "erasure_requested": any(e["event"] == "erasure_requested" for e in call_log),
+        "barge_in_occurred": any(e["event"] == "barge_in" and e.get("cancelled") for e in call_log),
+    }
+
+
 if __name__ == "__main__":
     call_log = []
 
@@ -275,15 +335,22 @@ if __name__ == "__main__":
     for entry in call_log:
         print(f"  {entry}")
 
+    print("\n--- call summary ---")
+    for key, value in summarize_call(call_log).items():
+        print(f"  {key}: {value}")
+
 # Expected: disclosure_given -> consent_requested -> recording_consent
 # (granted=True) appear first, in that order, before any customer_turn.
 # The claim-status turn and the photo turn each log turn_served with
 # path="native" or "modular" (which one is random per LIVE_CONNECT_FAIL_RATE
-# when a key is set; always "modular" with no key) — NOT both, and never
-# neither. The photo turn's log entry carries an "image" dict (hash+size),
-# never the raw bytes. The proactive turn logs agent_initiated=True — the
-# ONLY entry with that flag. The erasure turn logs erasure_requested with
-# transcript="[REDACTED]" instead of a normal customer_turn entry, and does
-# NOT trigger run_resilient_turn (no turn_served/failover event follows
-# it). Barge-in prints ~3-4 words of playback before [CONFIRMED] cuts it
-# off at the 0.5s mark.
+# when a key is set; always "modular" with no key) and a latency_ms — NOT
+# both paths, and never neither. The photo turn's log entry carries an
+# "image" dict (hash+size), never the raw bytes. The proactive turn logs
+# agent_initiated=True — the ONLY entry with that flag. The erasure turn
+# logs erasure_requested with transcript="[REDACTED]" instead of a normal
+# customer_turn entry, and does NOT trigger run_resilient_turn (no
+# turn_served/failover event follows it). Barge-in prints ~3-4 words of
+# playback before [CONFIRMED] cuts it off at the 0.5s mark. The closing
+# summary's turns_served is 2 (claim-status + photo — the erasure turn
+# never reaches run_resilient_turn), path_split sums to 2, and
+# recording_consent_granted is True.

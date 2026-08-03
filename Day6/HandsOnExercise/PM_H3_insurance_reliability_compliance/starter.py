@@ -1,10 +1,14 @@
 """
 PM · H3 — Insurance: Latency & Reliability + Compliance (STARTER)
 
-Native audio tries a REAL Gemini Live call first and fails over to the
-modular pipeline (AM_H1's shape, real streamed Claude call) on any failure
-— including a simulated unreachable draw when no key is set — so this lab
-runs for every student either way.
+The day's capstone: one insurance claims call, six production concerns,
+one call_log. Native audio tries a REAL Gemini Live call first and fails
+over to a modular pipeline (real streamed Claude call) on any failure —
+including a simulated unreachable draw when no key is set, so this lab
+runs for every student either way — timed and logged either way. On top
+of that: disclosure/consent/erasure compliance, multimodal redaction,
+proactive-turn attribution, barge-in, and a closing call summary that
+aggregates the whole log into one reliability+compliance report.
 """
 
 import asyncio
@@ -58,7 +62,7 @@ if genai_client is None:
 
 
 # ---------------------------------------------------------------------
-# Modular fallback pipeline — given, same shape as AM_H1.
+# Modular fallback pipeline — given.
 # ---------------------------------------------------------------------
 
 def fake_stt(user_utterance: str) -> str:
@@ -124,31 +128,43 @@ def run_resilient_turn(user_utterance: str, call_log: list) -> dict:
     """
     TODO 1: If genai_client is not None AND random.random() >
     LIVE_CONNECT_FAIL_RATE (i.e. this simulated draw says native is
-    reachable), try _try_connect_native() inside a try/except. On success,
-    append {"event": "turn_served", "path": "native", "audio_path": ...} to
-    call_log and return {"reply": ..., "path": "native", "audio_path": ...}.
-    On exception, append {"event": "native_failed", "error": str(exc)} and
-    fall through. Otherwise (or after a native failure): append {"event":
-    "failover_to_modular"}, call run_modular_fallback_turn(), append
-    {"event": "turn_served", "path": "modular"}, and return {"reply": ...,
-    "path": "modular", "audio_path": None}.
+    reachable), time it: t0 = time.perf_counter(), try _try_connect_native()
+    inside a try/except. On success, compute latency_ms = round((
+    time.perf_counter() - t0) * 1000), append {"event": "turn_served",
+    "path": "native", "latency_ms": latency_ms, "audio_path": ...} to
+    call_log and return {"reply": ..., "path": "native", "audio_path": ...,
+    "latency_ms": latency_ms}. On exception, append {"event":
+    "native_failed", "error": str(exc)} and fall through. Otherwise (or
+    after a native failure): append {"event": "failover_to_modular"}, time
+    and call run_modular_fallback_turn() the same way, append {"event":
+    "turn_served", "path": "modular", "latency_ms": latency_ms}, and return
+    {"reply": ..., "path": "modular", "audio_path": None, "latency_ms":
+    latency_ms}. The latency numbers are what justify caring about
+    failover at all — don't skip them.
     """
     if genai_client is not None and random.random() > LIVE_CONNECT_FAIL_RATE:
+        t0 = time.perf_counter()
         try:
             native = asyncio.run(_try_connect_native(user_utterance))
-            call_log.append({"event": "turn_served", "path": "native", "audio_path": native["audio_path"]})
-            return {"reply": native["reply"], "path": "native", "audio_path": native["audio_path"]}
+            latency_ms = round((time.perf_counter() - t0) * 1000)
+            call_log.append({
+                "event": "turn_served", "path": "native",
+                "latency_ms": latency_ms, "audio_path": native["audio_path"],
+            })
+            return {"reply": native["reply"], "path": "native", "audio_path": native["audio_path"], "latency_ms": latency_ms}
         except Exception as exc:
             call_log.append({"event": "native_failed", "error": str(exc)})
 
     call_log.append({"event": "failover_to_modular"})
+    t0 = time.perf_counter()
     reply = run_modular_fallback_turn(user_utterance)
-    call_log.append({"event": "turn_served", "path": "modular"})
-    return {"reply": reply, "path": "modular", "audio_path": None}
+    latency_ms = round((time.perf_counter() - t0) * 1000)
+    call_log.append({"event": "turn_served", "path": "modular", "latency_ms": latency_ms})
+    return {"reply": reply, "path": "modular", "audio_path": None, "latency_ms": latency_ms}
 
 
 # ---------------------------------------------------------------------
-# Compliance gate — Day 3 PM_H3's shape, extended below.
+# Compliance gate — disclosure/consent/erasure, extended below.
 # ---------------------------------------------------------------------
 
 def redact_image_ref(image_bytes: bytes) -> dict:
@@ -214,7 +230,7 @@ def handle_customer_turn(call_log: list, transcript: str, image_bytes: bytes | N
 
 
 # ---------------------------------------------------------------------
-# Barge-in — Day 3 AM_H2's InterruptionManager, reused as-is.
+# Barge-in — InterruptionManager cancels playback immediately on VAD.
 # ---------------------------------------------------------------------
 
 async def simulate_tts_playback(text: str, chunk_delay: float = 0.15):
@@ -268,6 +284,51 @@ async def demo_barge_in(call_log: list):
         print("    [CONFIRMED] playback stopped immediately")
 
 
+# ---------------------------------------------------------------------
+# Call summary — aggregates the log into one reliability + compliance
+# report, built entirely from events already written above.
+# ---------------------------------------------------------------------
+
+def summarize_call(call_log: list) -> dict:
+    """
+    TODO 6: Build the closing report from call_log, without adding any new
+    events — everything needed is already in there:
+      - served = the entries with event == "turn_served"
+      - path_split: count of served entries per "path" value
+      - avg_latency_ms / max_latency_ms: computed from each entry's
+        "latency_ms", grouped by "path" (None if a path has zero entries)
+      - native_failures: count of entries with event == "native_failed"
+      - disclosure_given: True if any entry has event == "disclosure_given"
+      - recording_consent_granted: the "granted" value of the entry with
+        event == "recording_consent" (None if that event never happened)
+      - erasure_requested: True if any entry has event == "erasure_requested"
+      - barge_in_occurred: True if any entry has event == "barge_in" AND
+        that entry's "cancelled" is truthy
+    Return all of the above as one dict.
+    """
+    served = [e for e in call_log if e["event"] == "turn_served"]
+    by_path = {"native": [], "modular": []}
+    for e in served:
+        by_path[e["path"]].append(e["latency_ms"])
+
+    def _avg(latencies):
+        return round(sum(latencies) / len(latencies)) if latencies else None
+
+    consent_entry = next((e for e in call_log if e["event"] == "recording_consent"), None)
+
+    return {
+        "turns_served": len(served),
+        "path_split": {path: len(latencies) for path, latencies in by_path.items()},
+        "avg_latency_ms": {path: _avg(latencies) for path, latencies in by_path.items()},
+        "max_latency_ms": {path: (max(latencies) if latencies else None) for path, latencies in by_path.items()},
+        "native_failures": sum(1 for e in call_log if e["event"] == "native_failed"),
+        "disclosure_given": any(e["event"] == "disclosure_given" for e in call_log),
+        "recording_consent_granted": consent_entry["granted"] if consent_entry else None,
+        "erasure_requested": any(e["event"] == "erasure_requested" for e in call_log),
+        "barge_in_occurred": any(e["event"] == "barge_in" and e.get("cancelled") for e in call_log),
+    }
+
+
 if __name__ == "__main__":
     call_log = []
 
@@ -291,3 +352,7 @@ if __name__ == "__main__":
     print("\n--- call log ---")
     for entry in call_log:
         print(f"  {entry}")
+
+    print("\n--- call summary ---")
+    for key, value in summarize_call(call_log).items():
+        print(f"  {key}: {value}")
