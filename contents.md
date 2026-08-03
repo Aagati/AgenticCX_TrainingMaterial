@@ -163,6 +163,19 @@ Latency & reliability · Compliance
  
 **Named platforms/tools (only day in Week 2 with explicit stack references):** Google Gemini ·
 Gemini Enterprise Agent Platform · Customer Engagement Suite · CX Agent Studio
+
+**Hands-on only (no separate Applied Lab for this day):**
+*AM* H1 Banking (native audio vs. modular pipeline) · H2 Insurance (affective
+dialogue + proactive audio) · H3 Telecom (real-time multimodality + tool use
+& grounding)
+*PM* H1 Retail (production architecture, fuses AM H1-H3) · H2 Banking
+(tooling & actions — LangGraph node, Gemini vs. Claude) · H3 Insurance
+(latency/reliability + compliance, the day's capstone fusion)
+See `Day6/HandsOnExercise/README.md` and `Day6_Notes.md` for the full
+breakdown. The Gemini Enterprise Agent Platform / Customer Engagement Suite
+/ CX Agent Studio row above is managed/console-driven with no SDK surface
+to build hands-on against — covered as discussion material inside AM_H1
+rather than as its own lab, the same treatment Day 3 gave "build vs. buy."
  
 ### Day 7 — Proactive, Outbound & Multilingual CX Agents
 **Major topics:**

@@ -1,0 +1,10 @@
+{
+  "disclosure_text": "This call may be handled by an AI assistant.",
+  "erasure_keywords": [
+    "delete my data",
+    "erase my data",
+    "remove my data",
+    "forget what i said"
+  ],
+  "consent_refusal_markers": ["no"]
+}

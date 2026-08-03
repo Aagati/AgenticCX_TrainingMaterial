@@ -14,16 +14,22 @@ claude-agent-sdk==0.2.123
 anthropic==0.117.0
 mcp==1.28.1
 
-# LangChain / LangGraph (Day 1-2)
+# LangChain / LangGraph (Day 1-2, Day 6)
 langchain==1.3.14
 langchain-anthropic==1.4.8
+# v4 added native Vertex AI support (vertexai=/project=/location=/
+# credentials= on ChatGoogleGenerativeAI) — PM_H2's Gemini node uses this
+# to route through GCP_CREDS_BASE64 (real billing) when the AI Studio key's
+# free tier is quota-exhausted; see Day6/HandsOnExercise/_vertex_client.py.
+langchain-google-genai==4.3.2
 langchain-core==1.4.9
 langgraph==1.2.9
 
 # CrewAI (Day 2)
 crewai==1.15.4
 
-# Other model SDKs (Day 1 appendix - OpenAI / Gemini)
+# Other model SDKs (Day 1 appendix - OpenAI / Gemini; google-genai also
+# drives the real Live API path in Day 6's HandsOnExercise labs)
 openai==2.46.0
 google-genai==2.13.0
 

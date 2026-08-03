@@ -198,3 +198,4 @@ memory_store.json
 
 # Capstone red-team instructor answer key — never share with candidates
 **/red_team_challenge_INSTRUCTOR_REFERENCE.py
+_audio_out/

@@ -1,0 +1,14 @@
+{
+  "red": {
+    "issue": "no internet connection",
+    "fix": "power-cycle the router and check the WAN cable at the modem"
+  },
+  "amber": {
+    "issue": "degraded signal",
+    "fix": "move the router away from other electronics and re-run a speed test"
+  },
+  "green": {
+    "issue": "no issue detected",
+    "fix": "device is online — if the customer still can't connect, escalate to account-level diagnostics"
+  }
+}

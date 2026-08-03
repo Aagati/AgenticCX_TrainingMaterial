@@ -1,0 +1,42 @@
+[
+  {
+    "call_id": "call_1",
+    "transcript": "I am SO frustrated, this is the third time I've called about the SAME claim!",
+    "expected_affect": "distressed"
+  },
+  {
+    "call_id": "call_2",
+    "transcript": "Hi, I'm calling to check on my claim status, just wanted a quick update.",
+    "expected_affect": "neutral"
+  },
+  {
+    "call_id": "call_3",
+    "transcript": "Thanks so much for the update, I really appreciate how quick this has been!",
+    "expected_affect": "positive"
+  },
+  {
+    "call_id": "call_4",
+    "transcript": "Honestly I'm pretty worried, the repair estimate came in way higher than I expected.",
+    "expected_affect": "distressed"
+  },
+  {
+    "call_id": "call_5",
+    "transcript": "Can you confirm the adjuster's visit is still scheduled for Tuesday?",
+    "expected_affect": "neutral"
+  },
+  {
+    "call_id": "call_6",
+    "transcript": "This whole process has been a nightmare, I'm fed up and I want a supervisor.",
+    "expected_affect": "distressed"
+  },
+  {
+    "call_id": "call_7",
+    "transcript": "Great, that's perfect, thank you for sorting that out so fast.",
+    "expected_affect": "positive"
+  },
+  {
+    "call_id": "call_8",
+    "transcript": "I just need the claim number for my records, that's all.",
+    "expected_affect": "neutral"
+  }
+]

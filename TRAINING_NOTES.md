@@ -12,8 +12,9 @@ build.
 | [Day3_Notes.md](Day3_Notes.md) | Voice pipeline — latency, turn-taking, telephony state, reliability, compliance |
 | [Day4_Notes.md](Day4_Notes.md) | Enterprise integration, guardrails-as-code, permissions, idempotency, audit |
 | [Day5_Notes.md](Day5_Notes.md) | Evaluation, online QA, ROI modeling, eval-gated rollout, governance |
+| [Day6/HandsOnExercise/Day6_Notes.md](Day6/HandsOnExercise/Day6_Notes.md) | Gemini Live API — native audio, affective/proactive dialogue, real-time multimodality, tool use & grounding, production architecture, reliability & compliance |
 
-## Setup (applies to all 5 days)
+## Setup (applies to Days 1-5)
 
 One shared venv + `.env` at repo root — see conversation history / `.gitignore`
 for what's tracked. To run any lab:
@@ -35,6 +36,23 @@ cd Day5_Training_Exercises/Day5_Training_Exercises/01_Prelunch_H1_Insurance_Eval
 `.venv/Scripts/python.exe -m pip install -r requirements.txt` if the venv
 ever needs rebuilding.
 
+## Setup (Day 6)
+
+Day 6 lives at `Day6/HandsOnExercise/<lab_folder>/` (already the current
+folder shape, unlike the `Day<N>_Labs/` paths above):
+
+```bash
+.venv/Scripts/python.exe Day6/HandsOnExercise/<lab_folder>/solution.py
+```
+
+Every lab's Gemini Live API calls are real if `GEMINI_API_KEY` (or
+`GOOGLE_API_KEY`) is set in `.env`, and fall back to a deterministic
+simulation otherwise — same "real-if-key" contract Day 3 used for
+Deepgram. `ANTHROPIC_API_KEY` is still required (`AM_H1`, `PM_H1`, `PM_H2`,
+and `PM_H3` all make real Claude calls regardless of Gemini key status).
+`PM_H2` additionally needs `langchain-google-genai` (now pinned in root
+`requirements.txt`).
+
 ## The week's arc
 
 1. **Day 1** — tool-use ramp: no tools → confirm-before-irreversible-action →
@@ -51,7 +69,14 @@ ever needs rebuilding.
    scoring, lexicon-based online QA, an ROI model tying it to a business case,
    and an eval gate that BLOCKS a rollout on regression or any safety
    violation, no override.
-6. **Capstone (Problem Statement 2)** — `Capstone_Telecom_Omnichannel_Agent/`
+6. **Day 6** — Week 1's voice/pipeline work meets Google Gemini's native-audio
+   Live API: three AM labs build one capability each (native audio, affective/
+   proactive dialogue, real-time multimodality + tool use/grounding), then
+   three PM labs compound them — production session management, tool-calling
+   moved into a swappable LangGraph node (Gemini vs. the modular stack made
+   concrete in code), and a capstone lab fusing native/modular failover with
+   the Day 3-style disclosure/consent/erasure compliance gate.
+7. **Capstone (Problem Statement 2)** — `Capstone_Telecom_Omnichannel_Agent/`
    fuses Days 1-5 into one graded build: multi-agent handoff (Day 2) over
    MCP tools with idempotency (Day 4), guarded by permissions + layered
    injection defense (Day 4), priced and traced through Langfuse (Day 5).
