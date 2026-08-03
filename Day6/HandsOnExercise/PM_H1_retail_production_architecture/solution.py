@@ -61,6 +61,19 @@ TTS_FIRST_BYTE_RANGE_MS = (60, 100)
 
 MULTIMODAL_LIVE_MODEL = "gemini-3.1-flash-live-preview"
 
+# Optional --voice flow only: real mic-in/speaker-out duplex loop, as a
+# contrast to every other turn in this lab (which sends TEXT and, on the
+# native route, gets audio back — never real mic input). pyaudio is an
+# optional dependency; its absence must not break the scripted default run.
+try:
+    import pyaudio
+except ImportError:
+    pyaudio = None
+
+VOICE_SEND_RATE = 16000  # Live API requires 16-bit PCM, 16kHz, mono on the way in
+VOICE_RECV_RATE = 24000  # Live API returns 16-bit PCM, 24kHz, mono on the way out
+VOICE_CHUNK = 1024
+
 DATA_DIR = Path(__file__).parent
 with open(DATA_DIR / "order_data.json") as f:
     ORDER_DB = json.load(f)
@@ -309,6 +322,97 @@ class RetailSupportSession:
         for entry in self.log:
             print(f"  {entry}")
 
+    # ---- Optional alternative flow: real duplex voice (mic in / speaker out) ----
+    # Nothing above this line uses a real microphone or speaker — every turn in
+    # this lab sends TEXT, and only the native route gets real audio BACK. This
+    # is what a real voice call adds: continuous audio in, streamed playback out,
+    # and handling for the two message types a text turn never produces
+    # (tool_call arriving mid-audio-stream, and "interrupted" for barge-in).
+
+    async def _mic_to_session(self, session, mic_stream, stop_event):
+        """Streams raw mic audio into the session chunk by chunk. Production
+        counterpart to send_client_content(text=...) above — audio goes in as
+        it's captured, never buffered into one blob first."""
+        while not stop_event.is_set():
+            chunk = await asyncio.to_thread(mic_stream.read, VOICE_CHUNK, exception_on_overflow=False)
+            await session.send_realtime_input(
+                audio=genai_types.Blob(data=chunk, mime_type=f"audio/pcm;rate={VOICE_SEND_RATE}")
+            )
+
+    async def _session_to_speaker(self, session, speaker_stream, stop_event):
+        """Plays audio deltas as they arrive (not buffer-then-play, unlike
+        AM_H1's save-to-wav-at-the-end) and handles what a live call adds over
+        a single text turn: tool_call (same get_order_status path as
+        _run_turn_async) and interrupted (the customer started talking while
+        the agent was still speaking — flush playback immediately or the
+        agent talks over them)."""
+        async for message in session.receive():
+            if stop_event.is_set():
+                break
+
+            if message.tool_call:
+                for fc in message.tool_call.function_calls:
+                    args = dict(fc.args)
+                    result = get_order_status(**args) if fc.name == "get_order_status" else {"error": "unknown tool"}
+                    self._record("tool_call", name=fc.name, args=args, result=result)
+                    await session.send_tool_response(
+                        function_responses=[genai_types.FunctionResponse(id=fc.id, name=fc.name, response=result)]
+                    )
+                continue
+
+            sc = message.server_content
+            if sc is None:
+                continue
+            if sc.interrupted:
+                self._record("voice_barge_in")
+                continue
+            if sc.model_turn:
+                for part in sc.model_turn.parts:
+                    if part.inline_data and part.inline_data.data:
+                        await asyncio.to_thread(speaker_stream.write, part.inline_data.data)
+
+    async def _voice_loop_async(self, duration_s: float):
+        pa = pyaudio.PyAudio()
+        mic_stream = pa.open(format=pyaudio.paInt16, channels=1, rate=VOICE_SEND_RATE,
+                              input=True, frames_per_buffer=VOICE_CHUNK)
+        speaker_stream = pa.open(format=pyaudio.paInt16, channels=1, rate=VOICE_RECV_RATE, output=True)
+        stop_event = asyncio.Event()
+        config = self._build_config()  # same tools + resumption + affect/proactivity as the text route
+        self._record("voice_loop_started")
+        try:
+            async with genai_client.aio.live.connect(model=MULTIMODAL_LIVE_MODEL, config=config) as session:
+                print(f"Voice loop live for {duration_s:.0f}s — talk into your mic now.")
+                try:
+                    await asyncio.wait_for(
+                        asyncio.gather(
+                            self._mic_to_session(session, mic_stream, stop_event),
+                            self._session_to_speaker(session, speaker_stream, stop_event),
+                        ),
+                        timeout=duration_s,
+                    )
+                except asyncio.TimeoutError:
+                    stop_event.set()
+        finally:
+            mic_stream.close()
+            speaker_stream.close()
+            pa.terminate()
+            self._record("voice_loop_ended")
+
+    def run_live_voice_demo(self, duration_s: float = 20.0):
+        """Optional alternative flow, NOT part of the scripted __main__ turns
+        below — those stay text-only on purpose so the lab runs on any laptop
+        with no mic. Run explicitly with `python solution.py --voice`.
+        Needs `pip install pyaudio` (+ system portaudio) and a real
+        GEMINI_API_KEY; degrades to a clear message otherwise instead of
+        pretending to simulate a microphone."""
+        if pyaudio is None:
+            print("pyaudio not installed — run `pip install pyaudio` to try --voice.")
+            return
+        if not self.real:
+            print("No Gemini credentials — --voice needs a real session, nothing to simulate here.")
+            return
+        asyncio.run(self._voice_loop_async(duration_s))
+
 
 def demo_am_recap():
     """Standalone recap of AM_H1's and AM_H2's core lessons, ported into
@@ -369,6 +473,11 @@ def demo_am_recap():
 
 if __name__ == "__main__":
     session = RetailSupportSession()
+
+    if "--voice" in sys.argv:
+        session.run_live_voice_demo()
+        session.print_log()
+        sys.exit(0)
 
     print(session.send_turn("Hi, can you check the status of order ORD-4471?"))
     print(session.send_turn("Here's a photo of the item I want to return.", image_bytes=make_damaged_item_png()))

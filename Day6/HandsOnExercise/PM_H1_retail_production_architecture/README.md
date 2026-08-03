@@ -109,6 +109,19 @@ exercise the real native path end to end:
 export GEMINI_API_KEY=...   # ai.google.dev
 ```
 
+## Optional: real duplex voice
+Every turn above sends TEXT — even the native route only gets real audio
+BACK, never real mic input. `RetailSupportSession.run_live_voice_demo()` is
+a separate, opt-in flow that opens a real mic-in/speaker-out loop against
+the same session config (tools, resumption, affect/proactivity included),
+and additionally handles `interrupted` (barge-in) and `tool_call` messages
+arriving mid-audio-stream. Not part of the scripted `__main__` turns, so
+the default lab still runs on a laptop with no mic. Try it with:
+```bash
+pip install pyaudio   # needs system portaudio; optional, only for --voice
+python solution.py --voice
+```
+
 ## Stretch goals
 - Print a session summary at the end: total turns, split by route
   (modular vs. native), tool calls made, whether a resumption handle was

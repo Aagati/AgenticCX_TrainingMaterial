@@ -195,10 +195,21 @@ if __name__ == "__main__":
     if result["citations"]:
         print(f"  Citations: {result['citations'][:3]}")
 
-# Expected: all 3 router-light PNGs produce a distinct diagnosis matching
-# ROUTER_LIGHT_COLORS/DIAGNOSTICS_DB (red -> "no internet connection", amber
-# -> "degraded signal", green -> "no issue detected") whether real or
-# simulated. The diagnostics tool call fires (tool_called=True) on the
+# Expected: in SIMULATION, all 3 router-light PNGs produce a distinct
+# diagnosis matching ROUTER_LIGHT_COLORS/DIAGNOSTICS_DB (red -> "no internet
+# connection", amber -> "degraded signal", green -> "no issue detected") —
+# the simulated branch is handed light_color_hint directly and looks it up.
+# The REAL multimodal call has no such guarantee: _run_multimodal_turn's
+# GenerateContentConfig binds no tools, so the model is reasoning purely
+# over pixels + text, never consulting diagnostics_kb.json. Expect it to
+# often land near the KB's meaning (red = clearly no connection) but not
+# its exact wording, and to sometimes hedge on ambiguous colors (amber/green
+# solid-block PNGs read as ambiguous even to a real vision model) — that's
+# not a bug, it's round 1 testing multimodality in isolation from tool use,
+# which round 2 tests separately. Combining both in one call is this lab's
+# own stretch goal, not baseline behavior.
+#
+# The diagnostics tool call fires (tool_called=True) on the
 # router-light question and should NOT fire on the loyalty-discount
 # question (no light color mentioned, no matching tool). The grounded
 # search call, when real, returns citations pointing at live web sources —
