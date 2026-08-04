@@ -25,11 +25,11 @@ language) can act on immediately.
 import json
 import sys
 from pathlib import Path
-from typing import Literal
+from typing import Callable, Literal, TypeVar
 
 from anthropic import Anthropic
 from dotenv import load_dotenv
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 
 load_dotenv()
 
@@ -41,8 +41,24 @@ MODEL = "claude-sonnet-5"
 DATA_DIR = Path(__file__).parent
 with open(DATA_DIR / "locale_policies.json", encoding="utf-8") as f:
     LOCALE_POLICIES = json.load(f)
+MEMORY_FILE = DATA_DIR / "journey_memory.json"
 
 client = Anthropic()
+
+T = TypeVar("T")
+
+
+def _with_retry(fn: Callable[..., T], *args, attempts: int = 3, **kwargs) -> T:
+    """Forced tool-use calls occasionally come back with a malformed/empty
+    input block (model-side variance, not a code bug) — retry a couple of
+    times rather than letting one flaky call kill a whole multi-touch
+    journey."""
+    for attempt in range(attempts):
+        try:
+            return fn(*args, **kwargs)
+        except ValidationError:
+            if attempt == attempts - 1:
+                raise
 
 
 class TurnResult(BaseModel):
@@ -78,16 +94,36 @@ class LanguageRouter:
 class JourneyMemoryStore:
     """Given — facts accumulate per customer_id, independent of which
     channel produced them. This is what makes the journey a JOURNEY
-    instead of a series of unrelated sessions."""
+    instead of a series of unrelated sessions.
 
-    def __init__(self):
-        self._facts: dict[str, list[str]] = {}
+    Backed by a local JSON file (`journey_memory.json`) so facts survive
+    past the current process — a real deployment would swap this file for
+    a shared datastore, but the interface (add_fact/get_facts/persist)
+    wouldn't need to change. Existing facts are loaded eagerly on init so
+    a NEW process picking up a returning customer already has their
+    history. Writes are NOT flushed per turn — `persist()` is called once
+    a full journey (all touches) has concluded, so a conversation that
+    dies mid-way never leaves a half-written record on disk."""
+
+    def __init__(self, path: Path = MEMORY_FILE):
+        self._path = path
+        if self._path.exists():
+            with open(self._path, encoding="utf-8") as f:
+                self._facts: dict[str, list[str]] = json.load(f)
+        else:
+            self._facts = {}
 
     def add_fact(self, customer_id: str, fact: str) -> None:
         self._facts.setdefault(customer_id, []).append(fact)
 
     def get_facts(self, customer_id: str) -> list[str]:
         return self._facts.get(customer_id, [])
+
+    def persist(self) -> None:
+        """Flush accumulated facts to disk. Call once per completed
+        journey, not per turn."""
+        with open(self._path, "w", encoding="utf-8") as f:
+            json.dump(self._facts, f, ensure_ascii=False, indent=2)
 
 
 class JourneyOrchestrator:
@@ -164,58 +200,175 @@ class HandoffPackager:
         return HandoffSummary(**tool_call.input)
 
 
+class HumanGreeting(BaseModel):
+    message: str = Field(
+        description="The human specialist's first message to the customer, written in the "
+        "customer's language, referencing the handoff context so the customer doesn't have "
+        "to re-explain anything. Signed with a first name and a human, non-AI tone."
+    )
+
+
+class HumanHandoffGreeter:
+    """Fires AFTER HandoffPackager, on escalate. Roleplays the HUMAN
+    specialist who just picked up the case — not the AI agent — writing
+    their first message back to the customer in the CUSTOMER'S language.
+    The handoff bundle stays English internally (see HandoffPackager); the
+    customer never has to know that hop happened."""
+
+    @staticmethod
+    def draft_message(locale: str, handoff: HandoffSummary, agent_name: str) -> str:
+        persona = LanguageRouter.route(locale)
+        system = (
+            f"You are {agent_name}, a human telecom support specialist who just received a case "
+            f"handed off from the AI support channel. Write your FIRST message directly to the "
+            f"customer, in {persona['language_name']}, tone: {persona['tone']}. You have full "
+            f"context from the handoff bundle below — reference the specific issue and what's "
+            f"already been tried so the customer never has to repeat themselves. Do not mention "
+            f"'AI', 'handoff', or 'bundle' — from the customer's side, this is just a specialist "
+            f"picking up their case. Sign off with your first name, {agent_name}."
+        )
+        user = (
+            f"Handoff summary: {handoff.summary}\n"
+            f"Key facts: {handoff.key_facts}\n"
+            f"Recommended action: {handoff.recommended_action}\n"
+            f"Customer sentiment: {handoff.sentiment}"
+        )
+        response = client.messages.create(
+            model=MODEL,
+            max_tokens=512,
+            system=system,
+            messages=[{"role": "user", "content": user}],
+            tools=[{
+                "name": "greet",
+                "description": "Return the human specialist's first message to the customer.",
+                "input_schema": HumanGreeting.model_json_schema(),
+            }],
+            tool_choice={"type": "tool", "name": "greet"},
+        )
+        tool_call = next(b for b in response.content if b.type == "tool_use")
+        return HumanGreeting(**tool_call.input).message
+
+
+def run_journey(
+    memory: JourneyMemoryStore,
+    customer_id: str,
+    locale: str,
+    agent_name: str,
+    touches: list[tuple[str, str]],
+) -> None:
+    """Drives one customer's full multi-touch journey against a SHARED
+    memory store, prints each turn, builds the hand-off bundle, drafts the
+    human specialist's first reply, then persists memory to disk — once,
+    at the end of the completed journey."""
+    orchestrator = JourneyOrchestrator(memory)
+    transcript: list[str] = []
+    last_result = None
+
+    print(f"\n{'=' * 70}")
+    print(f"=== Journey: {customer_id}, {locale}, {len(touches)} touches across "
+          f"{len(set(c for c, _ in touches))} channel(s) ===")
+    for i, (channel, utterance) in enumerate(touches, start=1):
+        result = _with_retry(orchestrator.advance_turn, customer_id, channel, locale, utterance)
+        transcript.append(f"[{channel}] Customer: {utterance}")
+        transcript.append(f"[{channel}] Agent: {result.reply}")
+        print(f"\nTurn {i} ({channel}) -> stage={result.stage}")
+        print(f"  Customer: {utterance}")
+        print(f"  Agent:    {result.reply}")
+        print(f"  Fact captured: {result.fact}")
+        last_result = result
+
+    print(f"\nMemory accumulated for {customer_id}: {memory.get_facts(customer_id)}")
+
+    label = "escalate" if last_result.stage == "escalate" else f"demoed anyway (landed on {last_result.stage})"
+    handoff = _with_retry(HandoffPackager.build_handoff, customer_id, locale, transcript, memory)
+    print(f"\n--- Hand-off bundle (English, for the human agent) — stage={label} ---")
+    print(f"  Summary:            {handoff.summary}")
+    print(f"  Key facts:          {handoff.key_facts}")
+    print(f"  Recommended action: {handoff.recommended_action}")
+    print(f"  Sentiment:          {handoff.sentiment}")
+
+    human_msg = _with_retry(HumanHandoffGreeter.draft_message, locale, handoff, agent_name)
+    print(f"\n--- Human specialist ({agent_name}) first message to customer, in "
+          f"{LanguageRouter.route(locale)['language_name']} ---")
+    print(f"  {human_msg}")
+
+    memory.persist()
+    print(f"\n  [memory persisted to {MEMORY_FILE.name}]")
+
+
 if __name__ == "__main__":
     print("=== LanguageRouter across locales ===")
     for locale in LOCALE_POLICIES:
         persona = LanguageRouter.route(locale)
         print(f"  {locale}: {persona['language_name']} | tone={persona['tone'][:40]}... | disclosure=\"{persona['disclosure_text'][:30]}...\"")
 
-    print("\n=== Journey: CUST-J1, ja-JP, chat then voice next day ===")
+    # One shared, disk-backed store for every journey below — this is what
+    # a single production memory layer looks like: per-customer isolation
+    # comes from the customer_id key, not from separate store instances.
     memory = JourneyMemoryStore()
-    orchestrator = JourneyOrchestrator(memory)
-    transcript = []
 
-    turn1 = orchestrator.advance_turn(
-        "CUST-J1", "chat", "ja-JP",
-        "My router keeps disconnecting every evening around 8pm, three nights in a row now.",
+    run_journey(
+        memory, "CUST-J1", "ja-JP", "Haruto",
+        [
+            ("chat", "My router keeps disconnecting every evening around 8pm, three nights in a row now."),
+            ("voice", "Hi, it's the same customer following up on the router issue from yesterday. It's now "
+                       "the fourth night in a row, I've already power-cycled the router twice and even "
+                       "swapped the ethernet cable — none of that helped. I want this escalated to a "
+                       "technician, not another round of basic troubleshooting."),
+        ],
     )
-    transcript.append(f"[chat] Customer: My router keeps disconnecting every evening around 8pm, three nights in a row now.")
-    transcript.append(f"[chat] Agent: {turn1.reply}")
-    print(f"Turn 1 (chat) -> stage={turn1.stage}")
-    print(f"  Agent: {turn1.reply}")
-    print(f"  Fact captured: {turn1.fact}")
 
-    turn2_utterance = (
-        "Hi, it's the same customer following up on the router issue from yesterday. It's now the "
-        "fourth night in a row, I've already power-cycled the router twice and even swapped the "
-        "ethernet cable — none of that helped. I want this escalated to a technician, not another "
-        "round of basic troubleshooting."
-    )
-    turn2 = orchestrator.advance_turn("CUST-J1", "voice", "ja-JP", turn2_utterance)
-    transcript.append(f"[voice] Customer: {turn2_utterance}")
-    transcript.append(f"[voice] Agent: {turn2.reply}")
-    print(f"\nTurn 2 (voice, next day) -> stage={turn2.stage}")
-    print(f"  Agent: {turn2.reply}")
-    print(f"  Fact captured: {turn2.fact}")
-    print(f"  Memory now holds: {memory.get_facts('CUST-J1')}")
-
-    label = "triggered by stage=escalate" if turn2.stage == "escalate" else f"demoed anyway (this run landed on stage={turn2.stage})"
-    handoff = HandoffPackager.build_handoff("CUST-J1", "ja-JP", transcript, memory)
-    print(f"\n=== Hand-off bundle (English, for the human agent) — {label} ===")
-    print(f"  Summary: {handoff.summary}")
-    print(f"  Key facts: {handoff.key_facts}")
-    print(f"  Recommended action: {handoff.recommended_action}")
-    print(f"  Sentiment: {handoff.sentiment}")
-
-    print("\n=== Journey: CUST-J2, de-DE, single-touch resolution ===")
-    memory2 = JourneyMemoryStore()
-    orchestrator2 = JourneyOrchestrator(memory2)
-    turn = orchestrator2.advance_turn(
-        "CUST-J2", "chat", "de-DE",
+    print("\n=== Journey: CUST-J2, de-DE, single-touch resolution (no escalation expected) ===")
+    orchestrator2 = JourneyOrchestrator(memory)
+    turn = _with_retry(
+        orchestrator2.advance_turn, "CUST-J2", "chat", "de-DE",
         "Wie viel Datenvolumen habe ich diesen Monat noch uebrig?",
     )
     print(f"Turn (chat) -> stage={turn.stage}")
     print(f"  Agent: {turn.reply}")
+    memory.persist()
+
+    # Three more journeys, each 3 touches across 2-3 channels, each landing
+    # on stage="escalate" — same pattern as CUST-J1, different locales.
+    run_journey(
+        memory, "CUST-J3", "es-MX", "Marcos",
+        [
+            ("chat", "Me cobraron dos veces el plan este mes, ya revise mi estado de cuenta y aparece duplicado."),
+            ("chat", "Sigo esperando el reembolso del cargo duplicado que reporte hace tres dias, nadie me ha "
+                      "contactado y ya me volvieron a cobrar el mes siguiente completo."),
+            ("voice", "Habla el mismo cliente del cargo duplicado. Ya son dos cargos extra sin resolver y quiero "
+                       "hablar con un supervisor para que revisen mi cuenta y me den una fecha exacta de reembolso."),
+        ],
+    )
+
+    run_journey(
+        memory, "CUST-J4", "de-DE", "Anke",
+        [
+            ("chat", "Mein neues Mobilteil schaltet sich seit gestern staendig von selbst aus, obwohl der Akku "
+                      "voll ist. Ich habe es erst vor zwei Wochen gekauft."),
+            ("sms", "Update zum Geraet: Neustart und Werksreset haben nichts gebracht, es schaltet sich immer "
+                     "noch alle paar Minuten ab."),
+            ("voice", "Ich rufe wegen des defekten Geraets an, das ich vor zwei Wochen gekauft habe. Neustart und "
+                       "Reset haben nicht geholfen, und ich moechte jetzt einen direkten Garantieaustausch, keine "
+                       "weiteren Tests."),
+        ],
+    )
+
+    run_journey(
+        memory, "CUST-J5", "pt-BR", "Renata",
+        [
+            ("chat", "Minha internet esta caindo todo dia por volta das 19h, ja e a segunda semana que isso "
+                      "acontece na minha regiao."),
+            ("chat", "Voltando a falar sobre a queda diaria as 19h: continua acontecendo todos os dias e agora "
+                      "quero um desconto na fatura pelos dias sem servico estavel."),
+            ("voice", "Sou o mesmo cliente das quedas diarias de internet as 19h. Ja se passaram duas semanas, "
+                       "preciso que um tecnico va ate minha casa e tambem preciso do desconto na fatura que "
+                       "pedi no chat, quero isso resolvido com um responsavel agora."),
+        ],
+    )
+
+    print(f"\n=== All journeys persisted. Restart this script and CUST-J1..J5 will load "
+          f"their prior facts from {MEMORY_FILE.name} instead of starting cold. ===")
 
 # Expected: LanguageRouter prints a distinct persona/tone/disclosure per
 # locale straight from locale_policies.json. CUST-J1's turn 1 (chat, ja-JP)

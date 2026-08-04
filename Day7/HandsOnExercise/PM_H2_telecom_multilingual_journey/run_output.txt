@@ -1,0 +1,214 @@
+=== LanguageRouter across locales ===
+  en-US: English | tone=friendly and casual, first-name basis, c... | disclosure="This conversation may be recor..."
+  es-MX: Spanish | tone=warm and respectful, use the formal 'ust... | disclosure="Aviso: esta conversacion puede..."
+  ja-JP: Japanese | tone=highly formal and polite, avoid contract... | disclosure="このやり取りは品質向上のため録音される場合があります。..."
+  de-DE: German | tone=formal and precise, use the 'Sie' form, ... | disclosure="Hinweis: Dieses Gespraech kann..."
+  pt-BR: Portuguese | tone=warm and moderately formal, friendly but... | disclosure="Aviso: esta conversa pode ser ..."
+
+======================================================================
+=== Journey: CUST-J1, ja-JP, 2 touches across 2 channel(s) ===
+
+Turn 1 (chat) -> stage=diagnosing
+  Customer: My router keeps disconnecting every evening around 8pm, three nights in a row now.
+  Agent:    お問い合わせいただきありがとうございます。3日連続で毎晩20時頃にルーターの接続が切れるとのこと、大変ご不便をおかけしており申し訳ございません。
+
+原因を特定するために、いくつか確認させていただけますでしょうか。
+
+1. 接続が切れる際、ルーター本体のランプ(特にインターネット/WANランプ)の色や点滅状況に変化はございますでしょうか。
+2. 切断は数分で自然に復旧いたしますか、それともルーターの再起動が必要でしょうか。
+3. 有線接続(LANケーブル)の機器でも同様に切断が発生しますか、それとも無線(Wi-Fi)接続の機器のみでしょうか。
+4. ルーターの設置場所や電源タップに変更はございませんでしょうか。
+
+お手数をおかけいたしますが、ご確認のうえご返信いただけますと幸いです。
+  Fact captured: router disconnects nightly around 8pm, occurring 3 consecutive nights
+
+Turn 2 (voice) -> stage=escalate
+  Customer: Hi, it's the same customer following up on the router issue from yesterday. It's now the fourth night in a row, I've already power-cycled the router twice and even swapped the ethernet cable — none of that helped. I want this escalated to a technician, not another round of basic troubleshooting.
+  Agent:    お電話いただき、誠にありがとうございます。また、これまでご不便をおかけしておりますこと、心よりお詫び申し上げます。
+
+ご状況を確認いたしました。夜8時頃に発生する切断が本日で4夜連続となっており、既にルーターの再起動を2回、LANケーブルの交換もお試しいただいたにもかかわらず、症状が改善していないとのこと、承知いたしました。基本的な切断・再起動系の対処ではすでに解決に至らないことが明確でございますため、これ以上同様の切り返しをお願いすることは致しません。
+
+本件につきましては、回線側の設備や夜間の帯域状況などを含めた専門的な調査が必要と判断し、技術担当者による対応へ即時エスカレーションさせていただきます。担当技術者より、詳細な回線診断および必要に応じて現地確認（訪問対応）のご連絡を差し上げるよう手配いたします。
+
+ご連絡先のお電話番号とご都合の良いお時間帯を教えていただけますでしょうか。技術担当者より優先的にご連絡させていただきます。
+  Fact captured: Customer performed 2 power cycles and swapped ethernet cable; issue persists on 4th consecutive night; requesting escalation to technician, no more basic troubleshooting.
+
+Memory accumulated for CUST-J1: ['router disconnects nightly around 8pm, occurring 3 consecutive nights', 'Customer performed 2 power cycles and swapped ethernet cable; issue persists on 4th consecutive night; requesting escalation to technician, no more basic troubleshooting.']
+
+--- Hand-off bundle (English, for the human agent) — stage=escalate ---
+  Summary:            Customer has experienced nightly router disconnections around 8pm for 4 consecutive days. They already tried power cycling the router twice and swapping the ethernet cable, but the issue persists. Customer explicitly requested escalation to a technician and refused further basic troubleshooting; the agent agreed and escalated the case for technical diagnostics, but still needs to collect the customer's contact info and preferred callback time.
+  Key facts:          ['Router disconnects nightly around 8pm, occurring for 4 consecutive nights now.', 'Customer performed 2 power cycles of the router; no improvement.', 'Customer swapped the ethernet cable; no improvement.', 'Basic troubleshooting (restart, cable swap) has been exhausted and did not resolve the issue.', 'Customer explicitly requested escalation to a technician and does not want further basic troubleshooting steps.', "Agent already escalated the case for technical/line diagnostics and possible on-site visit; customer's phone number and preferred contact time still need to be collected."]
+  Recommended action: Escalate immediately to a technical/network engineer for line diagnostics (including nighttime bandwidth/equipment check) and arrange an on-site visit if needed. Contact the customer promptly to confirm phone number and preferred callback time, and prioritize their case given repeated failed troubleshooting and explicit request to skip further basic steps.
+  Sentiment:          negative
+
+--- Human specialist (Haruto) first message to customer, in Japanese ---
+  お客様、大変お待たせして申し訳ございません。本件を担当いたします、技術サポートのハルトと申します。
+
+4日間連続で夜8時頃にルーターの接続が切断されるとのこと、大変ご不便をおかけしており、心よりお詫び申し上げます。すでにルーターの再起動を2回、また、LANケーブルの交換もお試しいただいたにもかかわらず、症状が改善されなかったとのご報告、確認いたしました。基本的な対処ではすでに解決に至らないことが明らかであるため、技術者による回線診断、および必要に応じた現地訪問対応へのエスカレーションを進めさせていただいております。
+
+つきましては、今後のご連絡をスムーズに進めるため、以下の2点についてお伺いできますでしょうか。
+
+1. 担当技術者よりご連絡させていただく際の、お客様のご連絡先電話番号
+2. ご都合のよいご連絡希望時間帯
+
+お忙しいところ恐れ入りますが、ご教示いただけますと幸いです。何卒よろしくお願い申し上げます。
+
+ハルト
+
+  [memory persisted to journey_memory.json]
+
+=== Journey: CUST-J2, de-DE, single-touch resolution (no escalation expected) ===
+Turn (chat) -> stage=diagnosing
+  Agent: Guten Tag, um Ihr verbleibendes Datenvolumen für diesen Monat zu prüfen, benötige ich noch Ihre Kunden- oder Mobilfunknummer. Könnten Sie mir diese bitte mitteilen? Alternativ können Sie Ihr aktuelles Datenvolumen auch jederzeit in unserer Kunden-App unter "Mein Verbrauch" einsehen.
+
+======================================================================
+=== Journey: CUST-J3, es-MX, 3 touches across 2 channel(s) ===
+
+Turn 1 (chat) -> stage=diagnosing
+  Customer: Me cobraron dos veces el plan este mes, ya revise mi estado de cuenta y aparece duplicado.
+  Agent:    Lamento mucho el inconveniente ocasionado, entiendo su preocupación al ver un cobro duplicado en su estado de cuenta. Quiero ayudarle a resolver esto lo antes posible.
+
+Para poder revisar su caso a detalle, ¿podría indicarme lo siguiente?
+
+1. Su número de línea o número de cliente.
+2. La fecha en que se generaron los dos cobros (o el periodo de facturación afectado).
+3. Si es posible, los montos exactos de cada cobro tal como aparecen en su estado de cuenta.
+
+Con esta información podré verificar el movimiento y darle una solución.
+  Fact captured: Cliente reporta cobro duplicado del plan en su estado de cuenta de este mes.
+
+Turn 2 (chat) -> stage=escalate
+  Customer: Sigo esperando el reembolso del cargo duplicado que reporte hace tres dias, nadie me ha contactado y ya me volvieron a cobrar el mes siguiente completo.
+  Agent:    Lamento mucho esta situación y entiendo su frustración, especialmente al ver que se suma un cobro adicional del mes siguiente sin haber recibido aún respuesta sobre el reembolso del cargo duplicado que reportó hace tres días. Esto no debió ocurrir así y le pido disculpas por la demora en el contacto.
+
+Dado que ya han pasado varios días sin resolución y ahora hay un segundo cobro involucrado, voy a escalar su caso de inmediato a nuestro equipo especializado en ajustes de facturación para que revisen ambos cargos (el duplicado y el del mes siguiente) y gestionen el reembolso correspondiente con carácter prioritario.
+
+Le pido su número de cuenta o de referencia del reporte anterior (si lo tiene a la mano) para adjuntarlo y agilizar la revisión. Un especialista se pondrá en contacto con usted a la brevedad para confirmar el reembolso y los tiempos de acreditación. Nuevamente, disculpe las molestias ocasionadas.
+  Fact captured: Reembolso de cobro duplicado reportado hace 3 días sin contacto ni resolución; además se generó un nuevo cobro completo del mes siguiente. Caso escalado a especialista de facturación.
+
+Turn 3 (voice) -> stage=escalate
+  Customer: Habla el mismo cliente del cargo duplicado. Ya son dos cargos extra sin resolver y quiero hablar con un supervisor para que revisen mi cuenta y me den una fecha exacta de reembolso.
+  Agent:    Entiendo perfectamente su molestia, y le pido disculpas por la demora en este caso. Tengo registrado que hace tres días se reportó el cobro duplicado sin haber recibido contacto ni solución, y que además se generó un nuevo cargo completo del mes siguiente. Son dos cargos indebidos pendientes de reembolso, y comprendo que necesita una respuesta concreta.
+
+Voy a escalar de inmediato su solicitud a un supervisor del área de facturación para que revise su cuenta con prioridad y le confirme una fecha exacta de reembolso de ambos cargos. Le contactará a través de este mismo número en un plazo máximo de 24 horas hábiles. ¿Me confirma que este es el mejor número para localizarlo?
+  Fact captured: Cliente exige hablar con un supervisor; ya son dos cargos extra sin resolver (duplicado + cargo completo del mes siguiente) y solicita fecha exacta de reembolso. Escalado nuevamente por vía telefónica.
+
+Memory accumulated for CUST-J3: ['Cliente reporta cobro duplicado del plan en su estado de cuenta de este mes.', 'Reembolso de cobro duplicado reportado hace 3 días sin contacto ni resolución; además se generó un nuevo cobro completo del mes siguiente. Caso escalado a especialista de facturación.', 'Cliente exige hablar con un supervisor; ya son dos cargos extra sin resolver (duplicado + cargo completo del mes siguiente) y solicita fecha exacta de reembolso. Escalado nuevamente por vía telefónica.']
+
+--- Hand-off bundle (English, for the human agent) — stage=escalate ---
+  Summary:            Customer was double-charged for their plan this month and reported it 3 days ago, but received no contact or resolution. Since then, a full additional charge for the following month was also applied, resulting in two unresolved erroneous charges. Customer contacted again via voice demanding to speak with a supervisor and requesting an exact refund date; case has been escalated multiple times (chat to billing specialist, then voice to supervisor) with a promised 24-business-hour callback.
+  Key facts:          ["Customer reports a duplicate charge for their plan on this month's statement.", 'Duplicate charge refund was reported 3 days ago with no contact or resolution from support.', 'A new full charge for the following month was also billed, resulting in two unresolved erroneous charges.', 'Case was escalated to a billing specialist via chat.', 'Customer called again via voice demanding to speak with a supervisor and an exact refund date.', 'Case was escalated again via phone to a billing supervisor with a promised callback within 24 business hours on the same phone number.', 'Customer is frustrated due to repeated escalations without resolution or concrete refund timeline.']
+  Recommended action: Prioritize immediate escalation to a billing supervisor to review the account, confirm and process refunds for both erroneous charges (duplicate charge + following month's full charge), and provide the customer with an exact refund date and confirmation of accreditation timeline. Ensure the customer is contacted proactively within the promised 24-business-hour window via the phone number on file, as multiple prior escalations have failed to result in contact or resolution.
+  Sentiment:          negative
+
+--- Human specialist (Marcos) first message to customer, in Spanish ---
+  Estimado/a cliente, le saluda Marcos. Tomo su caso con toda la prioridad que merece: entiendo que se le realizó un cobro duplicado de su plan, reportado hace ya 3 días sin haber recibido contacto ni solución, y que además se sumó un cobro completo correspondiente al mes siguiente, por lo que actualmente son dos cargos erróneos pendientes de reembolso. Soy consciente también de que su caso ya fue escalado en dos ocasiones (primero a un especialista de facturación y luego a un supervisor por vía telefónica) sin que hasta el momento se le haya brindado una fecha concreta de reembolso ni un contacto efectivo. Lamento sinceramente las molestias y la falta de seguimiento que ha experimentado. Voy a revisar personalmente su cuenta ahora mismo para confirmar ambos cargos y trabajar en el reembolso correspondiente, y mi objetivo es poder darle una fecha exacta de acreditación lo antes posible. Le pido un momento mientras verifico los detalles en el sistema para poder darle información precisa y definitiva.
+
+Saludos cordiales,
+Marcos
+
+  [memory persisted to journey_memory.json]
+
+======================================================================
+=== Journey: CUST-J4, de-DE, 3 touches across 3 channel(s) ===
+
+Turn 1 (chat) -> stage=diagnosing
+  Customer: Mein neues Mobilteil schaltet sich seit gestern staendig von selbst aus, obwohl der Akku voll ist. Ich habe es erst vor zwei Wochen gekauft.
+  Agent:    Das tut mir leid zu hören. Damit ich die Ursache eingrenzen kann, benötige ich noch ein paar Informationen:
+
+1. Um welches Gerätemodell handelt es sich genau?
+2. Schaltet sich das Gerät komplett aus (schwarzer Bildschirm) oder startet es neu (Neustart mit Logo)?
+3. Passiert das eher bei bestimmten Aktivitäten (z. B. beim Telefonieren, Laden, bestimmten Apps) oder völlig zufällig, auch im Standby?
+4. Haben Sie kürzlich ein Software-Update installiert oder neue Apps installiert?
+5. Wurde das Gerät eventuell heiß, bevor es sich ausgeschaltet hat?
+
+Zusätzlich wäre es hilfreich, wenn Sie einen einfachen Neustart (Aus- und wieder Einschalten sowie ggf. einen Soft-Reset) versuchen könnten, falls noch nicht geschehen. Da das Gerät erst zwei Wochen alt ist, kommt bei einem Hardwaredefekt grundsätzlich auch ein Umtausch bzw. eine Garantieabwicklung in Betracht – dafür müsste ich aber erst die genaue Fehlerursache verstehen.
+  Fact captured: Kunde hat Mobilteil vor 2 Wochen gekauft; Gerät schaltet sich seit gestern trotz voller Akkuladung selbstständig aus.
+
+Turn 2 (sms) -> stage=escalate
+  Customer: Update zum Geraet: Neustart und Werksreset haben nichts gebracht, es schaltet sich immer noch alle paar Minuten ab.
+  Agent:    Danke für Ihre Rückmeldung. Da Neustart und Werksreset das Problem nicht beheben konnten, liegt vermutlich ein Hardwaredefekt vor. Da das Mobilteil erst vor 2 Wochen gekauft wurde, veranlasse ich einen Umtausch/Reparatur über unseren Kundenservice. Ein Spezialist wird sich zeitnah bei Ihnen melden, um den Austausch zu organisieren. Bitte halten Sie Kaufbeleg und Gerät bereit.
+  Fact captured: Neustart und Werksreset haben das selbstständige Abschalten des Mobilteils nicht behoben; vermutlich Hardwaredefekt, Austausch/Reparatur nötig.
+
+Turn 3 (voice) -> stage=escalate
+  Customer: Ich rufe wegen des defekten Geraets an, das ich vor zwei Wochen gekauft habe. Neustart und Reset haben nicht geholfen, und ich moechte jetzt einen direkten Garantieaustausch, keine weiteren Tests.
+  Agent:    Vielen Dank für Ihren Anruf. Ich sehe in Ihrer Akte bereits, dass Sie bei Ihrem vor zwei Wochen gekauften Mobilteil einen Neustart und einen Werksreset durchgeführt haben, das selbstständige Abschalten trotz voller Akkuladung jedoch weiterhin auftritt. Da beide Standardmaßnahmen ohne Erfolg blieben, gehen wir von einem Hardwaredefekt aus. Ich veranlasse daher keine weiteren Tests, sondern leite Ihren Fall an unser Team für Garantieabwicklung weiter, damit ein direkter Geräteaustausch geprüft und eingeleitet werden kann. Ein Spezialist wird sich zeitnah mit den weiteren Schritten und benötigten Unterlagen (z. B. Kaufbeleg) bei Ihnen melden. Haben Sie den Kaufbeleg griffbereit für den Austauschprozess?
+  Fact captured: Kunde besteht auf direktem Garantieaustausch ohne weitere Tests; Fall an Garantieabwicklung/Spezialisten zu eskalieren.
+
+Memory accumulated for CUST-J4: ['Kunde hat Mobilteil vor 2 Wochen gekauft; Gerät schaltet sich seit gestern trotz voller Akkuladung selbstständig aus.', 'Neustart und Werksreset haben das selbstständige Abschalten des Mobilteils nicht behoben; vermutlich Hardwaredefekt, Austausch/Reparatur nötig.', 'Kunde besteht auf direktem Garantieaustausch ohne weitere Tests; Fall an Garantieabwicklung/Spezialisten zu eskalieren.']
+
+--- Hand-off bundle (English, for the human agent) — stage=escalate ---
+  Summary:            Customer bought a handset two weeks ago that started spontaneously powering off despite a full battery charge. Standard troubleshooting (restart, factory reset) did not resolve the issue, pointing to a hardware defect. Customer is now demanding an immediate warranty exchange without further testing, and the case has been escalated to the warranty/replacement team.
+  Key facts:          ['Customer purchased handset (Mobilteil) 2 weeks ago.', 'Since yesterday, device powers off spontaneously despite full battery charge.', 'Restart and factory reset did not fix the issue; device still shuts off every few minutes.', 'Suspected hardware defect; agent has already escalated for exchange/repair processing.', 'Customer insists on a direct warranty exchange without further troubleshooting or tests.', 'Customer needs to have proof of purchase (receipt) ready for the exchange process.']
+  Recommended action: Escalate to warranty/replacement specialist team to process a direct hardware exchange for the handset; contact the customer promptly to confirm receipt of purchase proof and arrange the exchange/repair without requiring additional diagnostic tests.
+  Sentiment:          negative
+
+--- Human specialist (Anke) first message to customer, in German ---
+  Guten Tag,
+
+mein Name ist Anke, ich übernehme Ihren Fall zu Ihrem Mobilteil, das sich seit gestern trotz voller Akkuladung eigenständig abschaltet. Mir liegt bereits vor, dass Neustart und Werksreset keine Besserung gebracht haben und von einem Hardwaredefekt auszugehen ist. Ich verstehe, dass Sie einen direkten Austausch ohne weitere Tests wünschen, und werde den Vorgang entsprechend als Garantieaustausch bearbeiten.
+
+Damit ich den Austausch umgehend veranlassen kann, benötige ich lediglich Ihren Kaufbeleg. Könnten Sie mir diesen bitte zeitnah zukommen lassen? Sobald dieser vorliegt, stoße ich den Austausch direkt an.
+
+Mit freundlichen Grüßen
+Anke
+
+  [memory persisted to journey_memory.json]
+
+======================================================================
+=== Journey: CUST-J5, pt-BR, 3 touches across 2 channel(s) ===
+
+Turn 1 (chat) -> stage=diagnosing
+  Customer: Minha internet esta caindo todo dia por volta das 19h, ja e a segunda semana que isso acontece na minha regiao.
+  Agent:    Olá! Sinto muito pelo transtorno, entendo como isso é frustrante, principalmente todo santo dia no mesmo horário. Já temos aqui um indício importante: como isso acontece por volta das 19h, há duas semanas, e parece afetar sua região, pode ser um problema de capacidade na rede local (horário de pico) ou alguma instabilidade pontual na infraestrutura da área.
+
+Para eu confirmar e já direcionar a solução mais rápida, pode me passar:
+1. Seu endereço completo ou CEP (para eu verificar se há registros de instabilidade na sua região);
+2. Quando a internet "cai", ela fica totalmente sem conexão, ou só fica lenta/instável?
+3. Isso acontece com todos os dispositivos conectados (cabo e wi-fi) ou só em alguns?
+
+Assim que eu tiver essas informações, consigo verificar se é algo pontual ou algo que já está sendo tratado pela nossa equipe técnica na sua área.
+  Fact captured: Cliente relata quedas de internet diárias por volta das 19h, há 2 semanas, possivelmente afetando toda a região.
+
+Turn 2 (chat) -> stage=escalate
+  Customer: Voltando a falar sobre a queda diaria as 19h: continua acontecendo todos os dias e agora quero um desconto na fatura pelos dias sem servico estavel.
+  Agent:    Olá! Obrigado por retornar e nos atualizar sobre a situação. Lamento muito que a queda diária por volta das 19h ainda esteja ocorrendo, mesmo após duas semanas — entendo perfeitamente sua frustração.
+
+Como esse problema é recorrente e possivelmente está afetando toda a região, e agora você também solicita um desconto na fatura pelos dias com instabilidade, vou encaminhar seu caso para um especialista humano da nossa equipe técnica e de faturamento. Eles têm acesso a ferramentas de diagnóstico de rede na sua área e também podem avaliar e aplicar o desconto proporcional aos dias afetados.
+
+Enquanto isso, para agilizar o atendimento, poderia me confirmar:
+1. Seu endereço completo ou número do contrato/protocolo, se tiver algum de atendimentos anteriores?
+2. A queda dura quanto tempo aproximadamente (minutos, horas)?
+
+Assim que tiver essas informações, nossa equipe especializada dará continuidade ao caso com prioridade.
+  Fact captured: Cliente confirma que a queda diária às 19h persiste após 2 semanas e agora solicita desconto na fatura pelos dias de instabilidade.
+
+Turn 3 (voice) -> stage=escalate
+  Customer: Sou o mesmo cliente das quedas diarias de internet as 19h. Ja se passaram duas semanas, preciso que um tecnico va ate minha casa e tambem preciso do desconto na fatura que pedi no chat, quero isso resolvido com um responsavel agora.
+  Agent:    Entendo perfeitamente sua frustração, e peço desculpas pelo transtorno causado por essas quedas diárias às 19h que já persistem há duas semanas. Como o problema continua mesmo após o prazo informado e pode estar afetando toda a região, vou encaminhar seu caso agora para um especialista técnico que poderá agendar a visita de um técnico até sua casa com prioridade.
+
+Também vou registrar sua solicitação de desconto na fatura referente aos dias de instabilidade, para que seja avaliada e aplicada por um responsável da área financeira/atendimento especializado, já que isso exige uma análise específica da sua conta.
+
+Você receberá um retorno de um de nossos especialistas em breve para confirmar o agendamento da visita técnica e tratar do desconto solicitado. Fique tranquilo(a), seu caso já está sinalizado como prioritário.
+  Fact captured: Cliente solicitou visita técnica presencial e desconto na fatura; caso escalado para atendimento especializado por persistência do problema após 2 semanas.
+
+Memory accumulated for CUST-J5: ['Cliente relata quedas de internet diárias por volta das 19h, há 2 semanas, possivelmente afetando toda a região.', 'Cliente confirma que a queda diária às 19h persiste após 2 semanas e agora solicita desconto na fatura pelos dias de instabilidade.', 'Cliente solicitou visita técnica presencial e desconto na fatura; caso escalado para atendimento especializado por persistência do problema após 2 semanas.']
+
+--- Hand-off bundle (English, for the human agent) — stage=escalate ---
+  Summary:            Customer has experienced daily internet outages around 7 PM for two weeks, likely a regional network issue. After repeated contacts via chat and voice without resolution, the customer is requesting both a technician home visit and a bill discount for the unstable service days, and demanded escalation to a human/responsible agent. The case has been escalated to specialized technical and billing support with priority status.
+  Key facts:          ['Customer reports daily internet outages around 7 PM (19h), occurring for 2 weeks, possibly affecting the entire region.', 'Issue persists despite prior contact; customer confirms outage recurs daily at same time.', 'Customer requests an in-person technician visit to their home.', 'Customer requests a discount on their bill for the days of service instability.', 'Customer explicitly asked to speak with a responsible/human agent to resolve this now.', 'Case has been escalated to specialized technical and billing support due to persistence of issue after 2 weeks.', 'No specific address, contract number, or protocol number was provided yet by the customer.']
+  Recommended action: Prioritize contacting the customer to schedule an on-site technician visit to diagnose the recurring 7 PM regional outage, and coordinate with billing to review and apply a proportional discount for the affected days. Collect customer's full address/CEP and account/contract number to check for regional network issues and process the billing adjustment.
+  Sentiment:          negative
+
+--- Human specialist (Renata) first message to customer, in Portuguese ---
+  Olá! Meu nome é Renata e vou assumir o seu atendimento a partir de agora.
+
+Já estou por dentro de todo o histórico: as quedas diárias de internet por volta das 19h, que já duram cerca de duas semanas, e que esse problema pode estar relacionado a uma instabilidade na rede da sua região. Também vi que você já tentou resolver por chat e telefone sem sucesso, e que solicitou uma visita técnica presencial e um desconto na fatura pelos dias de instabilidade - pontos totalmente válidos e que vou tratar com prioridade agora.
+
+Para agilizar, poderia me confirmar seu endereço completo (com CEP) e o número do contrato ou da conta? Com isso, vou verificar se há alguma ocorrência registrada na sua região, agendar a visita do técnico e já encaminhar a análise do desconto proporcional junto ao setor de cobrança.
+
+Pode ficar tranquilo(a), vou acompanhar pessoalmente até resolvermos isso.
+
+  [memory persisted to journey_memory.json]
+
+=== All journeys persisted. Restart this script and CUST-J1..J5 will load their prior facts from journey_memory.json instead of starting cold. ===

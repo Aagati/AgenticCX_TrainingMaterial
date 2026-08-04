@@ -191,6 +191,7 @@ __marimo__/
 
 # Local/generated state (hands-on demo data, not source)
 memory_store.json
+journey_memory.json
 
 # Voice lab audio (student-recorded WAVs / synthesized replies, not source)
 **/sample_audio/
