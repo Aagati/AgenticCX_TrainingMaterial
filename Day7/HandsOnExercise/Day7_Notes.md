@@ -160,6 +160,17 @@ construction, the densest thing built this day.
   used to be, before this retrofit) can't express.
 - `demo_pm_recap()` — standalone, cheap rerun of one deterministic concept
   from each of H1/H2/H3, no dependency on those labs having executed.
+- **This cohort doesn't get H3** — `_compliance_agent` /
+  `_route_after_compliance` / `_repair_agent` (the H3-derived brand-safety
+  loop) ship as GIVEN, fully-implemented code in `starter.py`, not a TODO;
+  students only build `_escalation_agent`, `_tiering_agent`, `_send_agent`,
+  and `_build_graph` (TODO 1-4), plus an optional bonus TODO 5
+  (`advance_customer_clocks`, the multi-touch demo below). The README/code
+  docstrings for this lab are also scrubbed of "(H1)"/"(H2)"/"(H3)"
+  pointers for the same reason and carry a self-contained Concept
+  Cheatsheet instead — this facilitator doc is the one place that still
+  names the source labs, since you're presumably running the full
+  curriculum.
 
 **Facilitator note — why this is a graph, not a pipeline.** An earlier
 draft of this lab was a flat method (`run_customer()`) calling each
@@ -193,17 +204,28 @@ the same way once you add a third or fourth revision path.
   human rather than a template).
 - None of the 5 demo customers trip `BrandSafetyLinter` on real model
   output, so the `repair_agent` <-> `compliance_agent` loop isn't
-  exercised in the campaign run — same reasoning as PM_H3, it's exercised
-  deterministically via `demo_pm_recap()`'s hand-crafted adversarial
-  string instead. `repair_attempted` caps the loop at exactly one retry —
-  a good live-break exercise is removing that cap and showing the graph
-  would otherwise cycle forever on a message type that can never satisfy
-  the linter.
+  exercised in the campaign run — it's exercised deterministically via
+  `demo_pm_recap()`'s hand-crafted adversarial string instead.
+  `repair_attempted` caps the loop at exactly one retry — a good
+  live-break exercise is removing that cap and showing the graph would
+  otherwise cycle forever on a message type that can never satisfy the
+  linter.
 - `ProactiveValueMeter` here only has ONE trigger (`win_back`) in its
   baseline-rates fixture — a good stretch exercise is adding a second
   trigger and confirming the meter generalizes without code changes.
 - Ask students to trace the OUTCOME MIX (see the README's table) across
-  the 5 demo customers — 1 sent/high, 1 sent/low, 1 escalated, 2 blocked
-  (one per gate) — and connect each outcome type to the organizational
-  question it answers (consent hygiene vs. scheduling vs. working-as-
-  intended vs. compliance).
+  the 5 demo customers — 2 sent, 1 escalated, 2 blocked (one per gate) —
+  and connect each outcome type to the organizational question it answers
+  (consent hygiene vs. scheduling vs. working-as-intended vs.
+  compliance). Classification is a REAL model call; don't assume the
+  tier split — check `model_used` in the log rather than hardcoding an
+  expected "1 high / 1 low," same caveat as PM_H1's `classify_urgency`.
+- `JourneyMemoryStore` is disk-backed (`campaign_memory.json`, gitignored,
+  regenerated/grown on every run) — but the base single-touch demo alone
+  never proves this is load-bearing, since a fact written on the way to a
+  send is only ever read AFTER it's written, in the same touch. The bonus
+  section (touch 2, ten days later, same memory store) is what actually
+  demonstrates a LATER decision reading an EARLIER touch's history — and
+  the closing "fresh `JourneyMemoryStore()`" reload proves the facts
+  survive independent of the `agent` object, not just across touches in
+  one process.

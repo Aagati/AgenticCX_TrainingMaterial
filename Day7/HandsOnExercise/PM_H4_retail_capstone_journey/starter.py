@@ -1,13 +1,14 @@
 """
 PM · H4 — Retail: Capstone — Personalised Outbound Journey Agent (STARTER)
 
-Every primitive in this file already exists somewhere in PM_H1-H3, in
-slightly different clothes: ConsentGate (H3), an eligibility/quiet-hours
-check (H1), locale-aware persona routing (H2), cost-tiered drafting (H1),
-BrandSafetyLinter + repair (H3), journey memory (H2), and hand-off (H2).
-This lab re-implements a thin, retail-flavored version of each. The new
-piece is PERSONALISATION: which offer a customer sees is a lookup keyed
-on their segment (retail_offer_catalog.json).
+Every primitive in this file is a thin, retail-flavored gate or specialist
+you'd expect in any regulated outbound-messaging system: ConsentGate, an
+eligibility/quiet-hours check, locale-aware persona routing, cost-tiered
+drafting, a BrandSafetyLinter + one-shot repair, persistent cross-touch
+journey memory, and a human hand-off. See the README's Concept Cheatsheet
+if any of these terms are new. The piece that's actually NEW here is
+PERSONALISATION: which offer a customer sees is a lookup keyed on their
+segment (retail_offer_catalog.json).
 
 THE ORCHESTRATION IS MULTI-AGENT — a LangGraph StateGraph, not a flat
 function-call chain. Two deterministic GATE nodes (given below) feed a
@@ -33,16 +34,18 @@ SPECIALIST AGENT the situation calls for:
                         ▼
                      END (blocked_safety)
 
-You'll build the five specialist-agent nodes plus the graph wiring:
-  1. _escalation_agent, 2. _tiering_agent, 3. _compliance_agent +
-  _route_after_compliance, 4. _repair_agent, 5. _send_agent,
-  6. _build_graph
+ComplianceAgent/RepairAgent (the brand-safety loop) are given below, fully
+implemented — you'll build the escalation/tiering/send specialists plus the
+graph wiring:
+  1. _escalation_agent, 2. _tiering_agent, 3. _send_agent, 4. _build_graph,
+  5. advance_customer_clocks (BONUS, optional — see the bottom of this
+  file; everything above it runs without this one)
 """
 
 import json
 import random
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Literal, TypedDict
 
@@ -62,6 +65,7 @@ MODEL_DRAFT = "claude-sonnet-5"
 DATA_DIR = Path(__file__).parent
 with open(DATA_DIR / "retail_offer_catalog.json") as f:
     CATALOG = json.load(f)
+MEMORY_FILE = DATA_DIR / "campaign_memory.json"
 
 client = Anthropic()
 
@@ -106,7 +110,9 @@ class HandoffSummary(BaseModel):
 
 
 def in_quiet_hours(local_hour: int, window: list[int]) -> bool:
-    """Given — same wrap-aware quiet-hours check as PM_H1."""
+    """Given — wrap-aware quiet-hours check; window is [start, end] in the
+    customer's local 24h clock and wraps midnight when start > end (e.g.
+    [21, 8] means quiet from 9pm to 8am)."""
     start, end = window
     if start > end:
         return local_hour >= start or local_hour < end
@@ -129,7 +135,9 @@ class LanguageRouter:
 
 
 class ConsentGate:
-    """Given — do-not-contact + "is there ANY opted-in channel"."""
+    """Given — do-not-contact + "is there ANY opted-in channel" —
+    deterministic, no model call. No consent-freshness window in this
+    capstone; keep the two checks that matter for every campaign."""
 
     @staticmethod
     def check(customer: dict) -> dict:
@@ -156,16 +164,33 @@ class EligibilityEngine:
 
 
 class JourneyMemoryStore:
-    """Given."""
+    """Given — facts accumulate per customer_id, independent of channel or
+    which campaign touch produced them. Disk-backed (campaign_memory.json)
+    so facts survive past the current process — a customer contacted in an
+    earlier touch already has their history when a LATER touch, even in a
+    brand-new process, picks them up. Facts load eagerly on init; writes
+    are NOT flushed per customer — persist() is called once a full
+    campaign touch has finished (see run_campaign)."""
 
-    def __init__(self):
-        self._facts: dict[str, list[str]] = {}
+    def __init__(self, path: Path = MEMORY_FILE):
+        self._path = path
+        if self._path.exists():
+            with open(self._path, encoding="utf-8") as f:
+                self._facts: dict[str, list[str]] = json.load(f)
+        else:
+            self._facts = {}
 
     def add_fact(self, customer_id: str, fact: str) -> None:
         self._facts.setdefault(customer_id, []).append(fact)
 
     def get_facts(self, customer_id: str) -> list[str]:
         return self._facts.get(customer_id, [])
+
+    def persist(self) -> None:
+        """Flush accumulated facts to disk. Call once per completed
+        campaign touch, not per customer."""
+        with open(self._path, "w", encoding="utf-8") as f:
+            json.dump(self._facts, f, ensure_ascii=False, indent=2)
 
 
 class BrandSafetyLinter:
@@ -184,15 +209,20 @@ class BrandSafetyLinter:
         }
 
 
-def classify_tier(customer: dict, segment_data: dict) -> TierClassification:
-    """Given — real haiku call, same shape as PM_H1's classify_urgency."""
+def classify_tier(customer: dict, segment_data: dict, prior_facts: list[str]) -> TierClassification:
+    """Given — real haiku call. `prior_facts` is this customer's
+    accumulated journey history (empty on a first contact) — a repeat
+    contact is itself a signal worth factoring into the tier decision."""
     system = (
         "You triage outbound retail win-back offers. Decide 'high' if this customer's case "
         "warrants a personally-drafted message (e.g. a high-value loyalty customer, or a customer "
         "whose profile suggests a generic message would land poorly) or 'low' if a standard "
         "templated offer is sufficient."
     )
-    user = f"Customer: {json.dumps({k: v for k, v in customer.items() if k != 'consent'})}\nOffer: {segment_data}"
+    user = (
+        f"Customer: {json.dumps({k: v for k, v in customer.items() if k != 'consent'})}\nOffer: {segment_data}\n"
+        f"Prior contact history: {prior_facts or '(first contact)'}"
+    )
     response = client.messages.create(
         model=MODEL_CHEAP, max_tokens=300, system=system,
         messages=[{"role": "user", "content": user}],
@@ -204,17 +234,23 @@ def classify_tier(customer: dict, segment_data: dict) -> TierClassification:
     return TierClassification(**tool_call.input)
 
 
-def draft_personalized_offer(customer: dict, segment_data: dict) -> str:
-    """Given — real sonnet call, persona (locale) + offer (segment) combined."""
+def draft_personalized_offer(customer: dict, segment_data: dict, prior_facts: list[str]) -> str:
+    """Given — real sonnet call, persona (locale) + offer (segment) + prior
+    contact history combined — the PERSONALISATION piece this capstone
+    adds on top of the base gates/specialists."""
     persona = LanguageRouter.route(customer["locale"])
     required = CATALOG["required_disclosure"]
     system = (
         f"You write short outbound retail marketing messages. Respond in {persona['language_name']}. "
         f"Tone: {persona['tone']}. Never use absolute claims like guaranteed pricing or risk-free "
         f"offers. You MUST include this exact disclosure sentence verbatim, unmodified, as the "
-        f"final sentence: \"{required}\""
+        f"final sentence: \"{required}\" If there is prior contact history, do not repeat the same "
+        f"pitch verbatim — acknowledge the earlier touch and vary the angle."
     )
-    user = f"Customer name: {customer['name']}\nSegment: {customer['segment']}\nOffer: {segment_data['offer_text']}"
+    user = (
+        f"Customer name: {customer['name']}\nSegment: {customer['segment']}\nOffer: {segment_data['offer_text']}\n"
+        f"Prior contact history: {prior_facts or '(first contact)'}"
+    )
     response = client.messages.create(
         model=MODEL_DRAFT, max_tokens=300, system=system, messages=[{"role": "user", "content": user}]
     )
@@ -228,7 +264,9 @@ def template_offer_message(customer: dict, segment_data: dict) -> str:
 
 
 def repair_message(draft_text: str, lint_result: dict) -> str:
-    """Given — one-shot, violation-specific repair, same as PM_H3."""
+    """Given — one-shot, violation-specific repair: rewrite once against
+    the SPECIFIC lint failures rather than asking the model to guess what
+    was wrong."""
     problems = []
     if lint_result["banned_phrase_violations"]:
         problems.append(f"Remove/rephrase these banned phrases: {lint_result['banned_phrase_violations']}")
@@ -268,7 +306,9 @@ class HandoffPackager:
 
 
 class ProactiveValueMeter:
-    """Given — H1's uplift meter, unchanged in shape."""
+    """Given — simulates a contacted cohort against a held-out control
+    cohort using retail_offer_catalog.json's baseline_conversion_rates, so
+    "measuring proactive value" produces an actual number."""
 
     def __init__(self, seed: int | None = 11):
         self.rng = random.Random(seed)
@@ -290,7 +330,7 @@ class ProactiveValueMeter:
 class JourneyState(TypedDict, total=False):
     """Given — shared scratchpad every node reads from and writes partial
     updates into; LangGraph merges each node's returned dict into this
-    state, same shallow-merge behavior Day6 PM_H2's ActionState relied on."""
+    state (a shallow merge, not a replace)."""
     customer: dict
     trigger_id: str
     now: datetime
@@ -343,70 +383,64 @@ class PersonalizedOutboundJourneyAgent:
     def _blocked_safety_node(self, state: JourneyState) -> dict:
         return {"event": "blocked_safety"}
 
+    # ---------- Compliance/repair loop (given — fully implemented) ----------
+
+    def _compliance_agent(self, state: JourneyState) -> dict:
+        """Checks the CURRENT draft — whether it's the tiering agent's
+        first attempt or the repair agent's rewrite, this node doesn't
+        care which; it only ever looks at state["message"]."""
+        lint = BrandSafetyLinter.check(state["message"])
+        if lint["passed"]:
+            return {"lint_passed": True}
+        return {"lint_passed": False, "violations": lint}
+
+    def _route_after_compliance(self, state: JourneyState) -> Literal["repair_agent", "send_agent", "blocked"]:
+        if state.get("lint_passed"):
+            return "send_agent"
+        if state.get("repair_attempted"):
+            return "blocked"  # already tried once — a second failure means the message TYPE needs a template, not another retry
+        return "repair_agent"
+
+    def _repair_agent(self, state: JourneyState) -> dict:
+        """Given the SPECIFIC violations, rewrites once, then hands control
+        back to the compliance agent to re-judge its own output — the
+        agentic loop a flat pipeline can't express."""
+        repaired_text = repair_message(state["message"], state["violations"])
+        return {"message": repaired_text, "repaired": True, "repair_attempted": True}
+
     # ---------- Specialist agents (TODO) ----------
 
     def _escalation_agent(self, state: JourneyState) -> dict:
         """
-        TODO 1: handoff = HandoffPackager.build_handoff(state["customer"],
-        a reason string mentioning state["trigger_id"], self.memory).
-        Return {"event": "escalated", "handoff_summary": handoff.summary,
-        "recommended_action": handoff.recommended_action, "sentiment":
-        handoff.sentiment}.
+        TODO 1: Hand this customer off to a human via HandoffPackager,
+        with a reason that references the campaign trigger. Also record
+        the escalation to memory — without it, an escalated customer's
+        history stays invisible to every future touch (the hand-off would
+        keep reading "no known facts" forever, even after this one).
+        Return an "escalated" event carrying the hand-off's summary,
+        recommended action, and sentiment.
         """
         raise NotImplementedError
 
     def _tiering_agent(self, state: JourneyState) -> dict:
         """
-        TODO 2: customer = state["customer"]. segment_data =
-        CATALOG["segments"].get(customer["segment"],
-        CATALOG["segments"]["standard"]). tier = classify_tier(customer,
-        segment_data). If tier.tier == "high": draft =
-        draft_personalized_offer(customer, segment_data); model_used =
-        MODEL_DRAFT. Else: draft = template_offer_message(customer,
-        segment_data); model_used = "template". Return {"segment_data":
-        segment_data, "tier": tier.tier, "model_used": model_used,
-        "message": draft}.
-        """
-        raise NotImplementedError
-
-    def _compliance_agent(self, state: JourneyState) -> dict:
-        """
-        TODO 3a: lint = BrandSafetyLinter.check(state["message"]). If
-        lint["passed"], return {"lint_passed": True}. Otherwise return
-        {"lint_passed": False, "violations": lint}. This node doesn't
-        care whether state["message"] is the tiering agent's first draft
-        or the repair agent's rewrite — it only ever looks at the
-        current value.
-        """
-        raise NotImplementedError
-
-    def _route_after_compliance(self, state: JourneyState) -> Literal["repair_agent", "send_agent", "blocked"]:
-        """
-        TODO 3b: If state.get("lint_passed"), return "send_agent". If
-        state.get("repair_attempted") is already True (this is the SECOND
-        time compliance has failed), return "blocked" — don't retry
-        forever. Otherwise return "repair_agent".
-        """
-        raise NotImplementedError
-
-    def _repair_agent(self, state: JourneyState) -> dict:
-        """
-        TODO 4: repaired_text = repair_message(state["message"],
-        state["violations"]). Return {"message": repaired_text,
-        "repaired": True, "repair_attempted": True} — this hands control
-        back to compliance_agent (wired in _build_graph) to re-judge the
-        rewritten draft.
+        TODO 2: Look up this customer's segment offer from CATALOG
+        (fall back to "standard" if their segment isn't listed). Pull
+        their prior contact history from memory first — a repeat touch
+        shouldn't be classified or drafted as if it were a first contact.
+        Classify the tier, then either draft a bespoke message or fall
+        back to the zero-token template depending on the result. Return
+        the segment data, the tier, which drafting path was used, and the
+        message.
         """
         raise NotImplementedError
 
     def _send_agent(self, state: JourneyState) -> dict:
         """
-        TODO 5: customer, channel, segment_data = state["customer"],
-        state["channel"], state["segment_data"]. Call
-        self.memory.add_fact(customer["customer_id"], a fact string
-        describing the offer sent (segment_data['discount_pct']) and
-        channel). Return {"event": "sent", "cost_units":
-        CATALOG["channel_tiers"][channel]["cost_units"]}.
+        TODO 3: Record to memory that this offer was sent — include
+        enough detail (what was offered, which channel, when) that a
+        later touch or hand-off can make sense of it without re-deriving
+        anything. Return a "sent" event carrying that channel's cost.
         """
         raise NotImplementedError
 
@@ -414,28 +448,16 @@ class PersonalizedOutboundJourneyAgent:
 
     def _build_graph(self):
         """
-        TODO 6: Wire the StateGraph(JourneyState):
-          - add_node for: "consent" (self._consent_node), "eligibility"
-            (self._eligibility_node), "escalation_agent"
-            (self._escalation_agent), "tiering_agent" (self._tiering_agent),
-            "compliance_agent" (self._compliance_agent), "repair_agent"
-            (self._repair_agent), "blocked_safety_node"
-            (self._blocked_safety_node), "send_agent" (self._send_agent)
-          - set_entry_point("consent")
-          - add_conditional_edges("consent", self._route_after_consent,
-            {"eligibility": "eligibility", "end": END})
-          - add_conditional_edges("eligibility",
-            self._route_after_eligibility, {"escalation_agent":
-            "escalation_agent", "tiering_agent": "tiering_agent", "end": END})
-          - add_edge("escalation_agent", END)
-          - add_edge("tiering_agent", "compliance_agent")
-          - add_conditional_edges("compliance_agent",
-            self._route_after_compliance, {"repair_agent": "repair_agent",
-            "send_agent": "send_agent", "blocked": "blocked_safety_node"})
-          - add_edge("repair_agent", "compliance_agent")  <- the loop
-          - add_edge("blocked_safety_node", END)
-          - add_edge("send_agent", END)
-          - return builder.compile()
+        TODO 4: Build a StateGraph(JourneyState) with all 8 node methods
+        above registered as nodes, "consent" as the entry point, and the
+        topology from the module docstring's diagram: each gate's router
+        can end the run early on a block; eligibility's router also
+        splits between the escalation and tiering specialists;
+        tiering feeds into compliance; compliance's router sends a
+        passing draft to send, a first failure to repair, and a second
+        failure to the blocked-safety node; repair loops back into
+        compliance (this is the one cycle in the graph — everything else
+        is a DAG). Return the compiled graph.
         """
         raise NotImplementedError
 
@@ -468,47 +490,71 @@ class PersonalizedOutboundJourneyAgent:
         return entry
 
     def run_campaign(self, customers: list[dict], trigger_id: str, now: datetime) -> list[dict]:
-        return [self.run_customer(customer, trigger_id, now) for customer in customers]
+        """Runs every customer through the graph, then persists memory to
+        disk once for the whole touch — not per customer."""
+        results = [self.run_customer(customer, trigger_id, now) for customer in customers]
+        self.memory.persist()
+        return results
+
+
+def advance_customer_clocks(customers: list[dict], sent_customer_ids: set[str], gap_days: int) -> None:
+    """
+    TODO 5 (BONUS — everything above this runs without it; the demo below
+    prints a skip notice and moves on if it's unimplemented). Mutate
+    `customers` in place to simulate `gap_days` passing between two
+    campaign touches: a real send resets ITS customer's contact-recency
+    clock, then time moves forward for everyone, contacted or not.
+    Escalations deliberately don't count as a send here — a human
+    hand-off isn't an outbound message. Sanity check once it's working:
+    with gap_days=10 against a 7-day frequency cap, a customer sent in
+    touch 1 should clear the cap by touch 2; drop gap_days below the cap
+    and they should come back blocked instead.
+    """
+    raise NotImplementedError
 
 
 def demo_pm_recap():
-    """Given — standalone, cheap rerun of one concept from each of
-    H1/H2/H3, so this capstone is runnable with no dependency on those
-    labs having run live first."""
-    print("\n=== PM recap 1/3 — H1's quiet-hours eligibility check ===")
+    """Standalone, cheap rerun of three deterministic mechanics used
+    above, in isolation, against hand-picked inputs."""
+    print("\n=== Recap 1/3 — quiet-hours eligibility check ===")
     ret02 = next(c for c in CUSTOMERS if c["customer_id"] == "RET-02")
     local_hour = (13 + ret02["timezone_offset_hours"]) % 24
     quiet = CATALOG["channel_tiers"]["sms"]["quiet_hours"]
     print(f"  RET-02 local hour at 13:00 dispatch = {local_hour}, sms quiet window = {quiet} -> "
           f"in_quiet_hours = {in_quiet_hours(local_hour, quiet)}")
 
-    print("\n=== PM recap 2/3 — H2's locale persona routing ===")
+    print("\n=== Recap 2/3 — locale persona routing ===")
     for locale in LOCALE_PERSONAS:
         persona = LanguageRouter.route(locale)
         print(f"  {locale}: {persona['language_name']} | {persona['tone']}")
 
-    print("\n=== PM recap 3/3 — H3's brand-safety linter on an adversarial draft ===")
+    print("\n=== Recap 3/3 — brand-safety linter on an adversarial draft ===")
     bad = "This deal has no risk and everyone qualifies, guaranteed lowest price!"
     print(f"  Draft: \"{bad}\"")
     print(f"  Lint: {BrandSafetyLinter.check(bad)}")
 
 
+def _print_outcome(entry: dict) -> None:
+    if entry["event"] == "sent":
+        print(f"  {entry['customer_id']}: SENT via {entry['channel']} "
+              f"(tier={entry['tier']}, model={entry['model_used']}, repaired={entry['repaired']})")
+        print(f"    \"{entry['message']}\"")
+    elif entry["event"] == "escalated":
+        print(f"  {entry['customer_id']}: ESCALATED — {entry['handoff_summary']}")
+        print(f"    Recommended action: {entry['recommended_action']}")
+    else:
+        print(f"  {entry['customer_id']}: {entry['event']} — {entry.get('reason') or entry.get('violations')}")
+
+
 if __name__ == "__main__":
     NOW = datetime(2026, 8, 3, 13, 0)
+    cold_start = not MEMORY_FILE.exists()
     agent = PersonalizedOutboundJourneyAgent()
 
-    print("=== Campaign: win_back ===")
+    print("=== Campaign: win_back — touch 1 ===")
     results = agent.run_campaign(CUSTOMERS, "win_back", NOW)
     for entry in results:
-        if entry["event"] == "sent":
-            print(f"  {entry['customer_id']}: SENT via {entry['channel']} "
-                  f"(tier={entry['tier']}, model={entry['model_used']}, repaired={entry['repaired']})")
-            print(f"    \"{entry['message']}\"")
-        elif entry["event"] == "escalated":
-            print(f"  {entry['customer_id']}: ESCALATED — {entry['handoff_summary']}")
-            print(f"    Recommended action: {entry['recommended_action']}")
-        else:
-            print(f"  {entry['customer_id']}: {entry['event']} — {entry.get('reason') or entry.get('violations')}")
+        _print_outcome(entry)
 
     contacted = [c for c in CUSTOMERS if any(
         e["customer_id"] == c["customer_id"] and e["event"] == "sent" for e in agent.analytics_log
@@ -517,10 +563,32 @@ if __name__ == "__main__":
     print(f"\nProactive value: contacted_rate={uplift['contacted_rate']} vs control_rate={uplift['control_rate']} "
           f"-> uplift={uplift['uplift_pp']}pp (n_contacted={uplift['contacted_n']})")
 
-    print(f"\n=== Journey memory ===")
+    start_label = "cold start" if cold_start else f"warm start — loaded from {MEMORY_FILE.name}"
+    print(f"\n=== Journey memory ({start_label}) ===")
     for customer in CUSTOMERS:
         facts = agent.memory.get_facts(customer["customer_id"])
         if facts:
             print(f"  {customer['customer_id']}: {facts}")
 
     demo_pm_recap()
+
+    # ---------------- BONUS: touch 2, 10 days later, same memory store ----------------
+    print("\n=== BONUS: Campaign: win_back — touch 2 (+10 days) ===")
+    sent_ids = {e["customer_id"] for e in results if e["event"] == "sent"}
+    try:
+        advance_customer_clocks(CUSTOMERS, sent_ids, gap_days=10)
+    except NotImplementedError:
+        print("  (BONUS not implemented — skipping touch 2)")
+    else:
+        touch2 = agent.run_campaign(CUSTOMERS, "win_back", NOW + timedelta(days=10))
+        for entry in touch2:
+            _print_outcome(entry)
+
+        print("\n=== BONUS: cross-session check — reloading memory from disk in a FRESH store ===")
+        fresh_memory = JourneyMemoryStore()
+        for customer in CUSTOMERS:
+            facts = fresh_memory.get_facts(customer["customer_id"])
+            if facts:
+                print(f"  {customer['customer_id']}: {facts}")
+        print(f"\n  [Re-run this script and RET-01..05 load their prior facts from "
+              f"{MEMORY_FILE.name} instead of starting cold.]")
