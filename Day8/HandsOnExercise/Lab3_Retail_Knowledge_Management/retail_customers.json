@@ -1,0 +1,16 @@
+{
+  "customers": [
+    {"customer_id": "CUST-R01", "name": "Sam Okonkwo", "segment": "loyalty_gold",
+     "query": "how long do i have to return something as a gold member"},
+    {"customer_id": "CUST-R02", "name": "Tara Lindqvist", "segment": "new_customer",
+     "query": "is there a discount for my first order"},
+    {"customer_id": "CUST-R03", "name": "Ben Osei", "segment": "standard",
+     "query": "what's your standard return policy"},
+    {"customer_id": "CUST-R04", "name": "Mei Chen", "segment": "loyalty_gold",
+     "query": "how do loyalty points work"},
+    {"customer_id": "CUST-R05", "name": "Diego Alvarez", "segment": "standard",
+     "query": "how much is shipping for a small order"},
+    {"customer_id": "CUST-R06", "name": "Noor Hassan", "segment": "new_customer",
+     "query": "what are the holiday shipping deadlines this year"}
+  ]
+}

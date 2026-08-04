@@ -1,0 +1,20 @@
+{
+  "customers": [
+    {"customer_id": "CUST-C01", "name": "Wendell Park", "policy_type": "auto", "segment": "standard",
+     "pending_question": "how do I check the status of my claim"},
+    {"customer_id": "CUST-C02", "name": "Ines Duarte", "policy_type": "home", "segment": "premium",
+     "pending_question": "is smoke damage from a kitchen fire covered"},
+    {"customer_id": "CUST-C03", "name": "Malik Freeman", "policy_type": "health", "segment": "standard",
+     "pending_question": "what does my deductible actually mean for this bill"},
+    {"customer_id": "CUST-C04", "name": "Simone Larsson", "policy_type": "auto", "segment": "premium",
+     "pending_question": "what does my liability coverage actually pay for"},
+    {"customer_id": "CUST-C05", "name": "Ravi Chandran", "policy_type": "home", "segment": "standard",
+     "pending_question": "is water damage from the storm covered under my policy"},
+    {"customer_id": "CUST-C06", "name": "Odalys Reyes", "policy_type": "health", "segment": "premium",
+     "pending_question": "how much of this bill am I responsible for before the plan kicks in"},
+    {"customer_id": "CUST-C07", "name": "Grant Ashworth", "policy_type": "auto", "segment": "standard",
+     "pending_question": "where can I see if my claim has moved forward"},
+    {"customer_id": "CUST-C08", "name": "Naledi Mokoena", "policy_type": "home", "segment": "standard",
+     "pending_question": "how do I cancel my policy and will I get a refund"}
+  ]
+}

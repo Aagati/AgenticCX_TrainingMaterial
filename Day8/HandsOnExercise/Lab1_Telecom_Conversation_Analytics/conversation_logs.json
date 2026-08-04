@@ -1,0 +1,363 @@
+{
+  "conversations": [
+    {
+      "conversation_id": "CONV-001",
+      "customer_id": "CUST-T01",
+      "channel": "voice",
+      "segment": "consumer",
+      "date": "2026-07-29",
+      "duration_seconds": 420,
+      "resolved": false,
+      "csat": null,
+      "transcript": [
+        {"role": "customer", "text": "This is the third time this month my internet has dropped in the middle of a video call. I work from home, this is costing me."},
+        {"role": "agent", "text": "I'm sorry about that. I can see two prior outage reports on this line. Let me run a line diagnostic."},
+        {"role": "customer", "text": "You ran a diagnostic last time too and nothing changed. I need someone to actually fix this or I'm switching providers."}
+      ]
+    },
+    {
+      "conversation_id": "CONV-002",
+      "customer_id": "CUST-T02",
+      "channel": "chat",
+      "segment": "prepaid",
+      "date": "2026-07-29",
+      "duration_seconds": 180,
+      "resolved": true,
+      "csat": 5,
+      "transcript": [
+        {"role": "customer", "text": "Hi, my prepaid balance shows $0 but I recharged this morning."},
+        {"role": "agent", "text": "Checking now — the recharge posted but wasn't applied to your active plan. I've applied it manually, you should see it now."},
+        {"role": "customer", "text": "Yep, showing now. Thank you, that was fast!"}
+      ]
+    },
+    {
+      "conversation_id": "CONV-003",
+      "customer_id": "CUST-T03",
+      "channel": "sms",
+      "segment": "consumer",
+      "date": "2026-07-29",
+      "duration_seconds": 90,
+      "resolved": true,
+      "csat": null,
+      "transcript": [
+        {"role": "customer", "text": "how do i turn on wifi calling"},
+        {"role": "agent", "text": "Settings > Network > Wi-Fi Calling > toggle on. Takes about a minute to register."},
+        {"role": "customer", "text": "got it, works now"}
+      ]
+    },
+    {
+      "conversation_id": "CONV-004",
+      "customer_id": "CUST-T04",
+      "channel": "voice",
+      "segment": "business",
+      "date": "2026-08-01",
+      "duration_seconds": 540,
+      "resolved": false,
+      "csat": null,
+      "transcript": [
+        {"role": "customer", "text": "Our whole office line is down. We have twelve people who can't take customer calls right now."},
+        {"role": "agent", "text": "I understand the urgency. I'm opening a priority ticket and looping in the business network team."},
+        {"role": "customer", "text": "How long is this going to take? We're losing business every minute this is down."}
+      ]
+    },
+    {
+      "conversation_id": "CONV-005",
+      "customer_id": "CUST-T05",
+      "channel": "chat",
+      "segment": "consumer",
+      "date": "2026-07-30",
+      "duration_seconds": 240,
+      "resolved": true,
+      "csat": 2,
+      "transcript": [
+        {"role": "customer", "text": "I was charged $45 in roaming fees. Nobody told me international roaming wasn't included."},
+        {"role": "agent", "text": "I see the charge. Since this is your first time traveling on this plan, I can issue a one-time courtesy credit."},
+        {"role": "customer", "text": "Fine, I guess, but this should have been disclosed before I traveled."}
+      ]
+    },
+    {
+      "conversation_id": "CONV-006",
+      "customer_id": "CUST-T06",
+      "channel": "voice",
+      "segment": "consumer",
+      "date": "2026-07-30",
+      "duration_seconds": 150,
+      "resolved": true,
+      "csat": 5,
+      "transcript": [
+        {"role": "customer", "text": "I wanted to say thank you, the agent yesterday fixed my SIM issue in like five minutes."},
+        {"role": "agent", "text": "That's great to hear, I'll pass that along to the team."}
+      ]
+    },
+    {
+      "conversation_id": "CONV-007",
+      "customer_id": "CUST-T07",
+      "channel": "chat",
+      "segment": "prepaid",
+      "date": "2026-07-30",
+      "duration_seconds": 200,
+      "resolved": false,
+      "csat": null,
+      "transcript": [
+        {"role": "customer", "text": "I bought the 5GB add-on an hour ago and it still isn't active. I'm out of data."},
+        {"role": "agent", "text": "I can see the purchase went through but the activation is stuck in queue. Let me push it manually."},
+        {"role": "customer", "text": "Please hurry, I need this for work."}
+      ]
+    },
+    {
+      "conversation_id": "CONV-008",
+      "customer_id": "CUST-T08",
+      "channel": "sms",
+      "segment": "business",
+      "date": "2026-07-30",
+      "duration_seconds": 60,
+      "resolved": true,
+      "csat": 4,
+      "transcript": [
+        {"role": "customer", "text": "need to add a fourth line to our business plan"},
+        {"role": "agent", "text": "Done — line added, SIM ships in 2 business days, prorated charge will show on next invoice."},
+        {"role": "customer", "text": "great, thanks"}
+      ]
+    },
+    {
+      "conversation_id": "CONV-009",
+      "customer_id": "CUST-T09",
+      "channel": "voice",
+      "segment": "consumer",
+      "date": "2026-07-31",
+      "duration_seconds": 480,
+      "resolved": false,
+      "csat": 1,
+      "transcript": [
+        {"role": "customer", "text": "I've called three times this week about the same billing error and every time I'm told it's fixed. It's not fixed."},
+        {"role": "agent", "text": "I apologize for the repeated issue. I can see the prior two tickets were closed without the credit being applied."},
+        {"role": "customer", "text": "I want to speak to a supervisor. I'm done explaining this from scratch every time."}
+      ]
+    },
+    {
+      "conversation_id": "CONV-010",
+      "customer_id": "CUST-T10",
+      "channel": "chat",
+      "segment": "consumer",
+      "date": "2026-07-31",
+      "duration_seconds": 130,
+      "resolved": true,
+      "csat": 4,
+      "transcript": [
+        {"role": "customer", "text": "Can you tell me when my contract renews?"},
+        {"role": "agent", "text": "Your current term ends 2026-11-15, it'll auto-renew month-to-month unless you choose a new plan."},
+        {"role": "customer", "text": "Perfect, thanks."}
+      ]
+    },
+    {
+      "conversation_id": "CONV-011",
+      "customer_id": "CUST-T11",
+      "channel": "voice",
+      "segment": "prepaid",
+      "date": "2026-08-01",
+      "duration_seconds": 300,
+      "resolved": true,
+      "csat": 3,
+      "transcript": [
+        {"role": "customer", "text": "My data speeds have been really slow the last few days, like unusably slow."},
+        {"role": "agent", "text": "You've used 92% of your monthly high-speed allotment, after that you're on the reduced-speed tier per your plan."},
+        {"role": "customer", "text": "Oh, I didn't realize that was how it worked. Okay, that explains it."}
+      ]
+    },
+    {
+      "conversation_id": "CONV-012",
+      "customer_id": "CUST-T12",
+      "channel": "chat",
+      "segment": "business",
+      "date": "2026-08-03",
+      "duration_seconds": 260,
+      "resolved": false,
+      "csat": null,
+      "transcript": [
+        {"role": "customer", "text": "We were promised a dedicated account manager when we signed the enterprise plan six weeks ago. We still don't have one."},
+        {"role": "agent", "text": "I apologize for the delay, let me escalate this to our business accounts team directly."},
+        {"role": "customer", "text": "This is the second time I've had to chase this down myself."}
+      ]
+    },
+    {
+      "conversation_id": "CONV-013",
+      "customer_id": "CUST-T13",
+      "channel": "sms",
+      "segment": "consumer",
+      "date": "2026-08-01",
+      "duration_seconds": 45,
+      "resolved": true,
+      "csat": 5,
+      "transcript": [
+        {"role": "customer", "text": "can i check my data usage over text"},
+        {"role": "agent", "text": "You've used 6.2GB of 15GB this cycle, resets 2026-08-14."},
+        {"role": "customer", "text": "perfect ty"}
+      ]
+    },
+    {
+      "conversation_id": "CONV-014",
+      "customer_id": "CUST-T01",
+      "channel": "chat",
+      "segment": "consumer",
+      "date": "2026-08-01",
+      "duration_seconds": 310,
+      "resolved": true,
+      "csat": 2,
+      "transcript": [
+        {"role": "customer", "text": "Following up again on the dropped calls issue from last week. A technician finally came out."},
+        {"role": "agent", "text": "I see the field visit notes — a corroded line connection was replaced. You should notice a real difference now."},
+        {"role": "customer", "text": "It better be fixed after three weeks of this."}
+      ]
+    },
+    {
+      "conversation_id": "CONV-015",
+      "customer_id": "CUST-T14",
+      "channel": "voice",
+      "segment": "consumer",
+      "date": "2026-08-01",
+      "duration_seconds": 200,
+      "resolved": true,
+      "csat": 4,
+      "transcript": [
+        {"role": "customer", "text": "I want to port my number from my old carrier."},
+        {"role": "agent", "text": "I can start that now — I'll need your account number and PIN from the old carrier. Port usually completes within 24 hours."},
+        {"role": "customer", "text": "Okay, sending that over now."}
+      ]
+    },
+    {
+      "conversation_id": "CONV-016",
+      "customer_id": "CUST-T15",
+      "channel": "chat",
+      "segment": "prepaid",
+      "date": "2026-08-01",
+      "duration_seconds": 170,
+      "resolved": false,
+      "csat": null,
+      "transcript": [
+        {"role": "customer", "text": "Someone has been calling me from spoofed numbers pretending to be your billing department asking for my card info."},
+        {"role": "agent", "text": "That's a scam call, not us — we never ask for full card numbers over the phone. I'll flag this to our fraud team."},
+        {"role": "customer", "text": "Can you actually do something about it though, this has happened four times now."}
+      ]
+    },
+    {
+      "conversation_id": "CONV-017",
+      "customer_id": "CUST-T16",
+      "channel": "voice",
+      "segment": "business",
+      "date": "2026-08-02",
+      "duration_seconds": 400,
+      "resolved": true,
+      "csat": 3,
+      "transcript": [
+        {"role": "customer", "text": "We need static IPs provisioned for our new office location before Monday."},
+        {"role": "agent", "text": "I've submitted the provisioning request, confirmed turnaround is 3 business days, so it'll land Wednesday, not Monday."},
+        {"role": "customer", "text": "That's tight but workable, please keep me updated."}
+      ]
+    },
+    {
+      "conversation_id": "CONV-018",
+      "customer_id": "CUST-T17",
+      "channel": "sms",
+      "segment": "consumer",
+      "date": "2026-08-02",
+      "duration_seconds": 50,
+      "resolved": true,
+      "csat": 5,
+      "transcript": [
+        {"role": "customer", "text": "does my plan include hotspot"},
+        {"role": "agent", "text": "Yes, 10GB of hotspot data included, then throttled to 3G speeds."},
+        {"role": "customer", "text": "great thanks"}
+      ]
+    },
+    {
+      "conversation_id": "CONV-019",
+      "customer_id": "CUST-T07",
+      "channel": "voice",
+      "segment": "prepaid",
+      "date": "2026-08-02",
+      "duration_seconds": 260,
+      "resolved": true,
+      "csat": 2,
+      "transcript": [
+        {"role": "customer", "text": "The data add-on from a few days ago finally worked, but I lost almost a full day of data I paid for."},
+        {"role": "agent", "text": "You're right, I can see the delay. I've added a 1GB credit to cover the lost time."},
+        {"role": "customer", "text": "Okay, that's fair. Thanks for sorting it."}
+      ]
+    },
+    {
+      "conversation_id": "CONV-020",
+      "customer_id": "CUST-T18",
+      "channel": "chat",
+      "segment": "consumer",
+      "date": "2026-08-02",
+      "duration_seconds": 220,
+      "resolved": false,
+      "csat": null,
+      "transcript": [
+        {"role": "customer", "text": "I'm seriously considering cancelling. My bill went up $30 with no explanation and this is the second unexplained increase this year."},
+        {"role": "agent", "text": "I can see a promotional rate expired last cycle. Let me pull up retention offers for your account."},
+        {"role": "customer", "text": "I don't want an offer, I want to understand why nobody tells us before these increases hit."}
+      ]
+    },
+    {
+      "conversation_id": "CONV-021",
+      "customer_id": "CUST-T19",
+      "channel": "voice",
+      "segment": "consumer",
+      "date": "2026-08-03",
+      "duration_seconds": 190,
+      "resolved": true,
+      "csat": 4,
+      "transcript": [
+        {"role": "customer", "text": "My voicemail isn't set up, can you walk me through it?"},
+        {"role": "agent", "text": "Sure — dial *86, follow the prompts to set a PIN and record your greeting. Want to stay on the line while you try it?"},
+        {"role": "customer", "text": "Did it, works now, thanks."}
+      ]
+    },
+    {
+      "conversation_id": "CONV-022",
+      "customer_id": "CUST-T12",
+      "channel": "voice",
+      "segment": "business",
+      "date": "2026-08-03",
+      "duration_seconds": 360,
+      "resolved": true,
+      "csat": 3,
+      "transcript": [
+        {"role": "customer", "text": "Following up on the account manager request — I was told someone would call, nobody did."},
+        {"role": "agent", "text": "I sincerely apologize. I've assigned Priya from our business accounts team directly, she'll call you within the hour."},
+        {"role": "customer", "text": "Alright, I'll give it one more chance."}
+      ]
+    },
+    {
+      "conversation_id": "CONV-023",
+      "customer_id": "CUST-T20",
+      "channel": "sms",
+      "segment": "prepaid",
+      "date": "2026-08-03",
+      "duration_seconds": 40,
+      "resolved": true,
+      "csat": null,
+      "transcript": [
+        {"role": "customer", "text": "how do i check my plan expiry date"},
+        {"role": "agent", "text": "Your current plan expires 2026-08-20. Recharge before then to avoid service interruption."},
+        {"role": "customer", "text": "ok thanks"}
+      ]
+    },
+    {
+      "conversation_id": "CONV-024",
+      "customer_id": "CUST-T04",
+      "channel": "voice",
+      "segment": "business",
+      "date": "2026-08-03",
+      "duration_seconds": 300,
+      "resolved": true,
+      "csat": 5,
+      "transcript": [
+        {"role": "customer", "text": "Following up on our office outage from last week — wanted to say the fix held, zero downtime since."},
+        {"role": "agent", "text": "Great to hear, I've closed the priority ticket and logged the resolution for reference."},
+        {"role": "customer", "text": "Appreciate the follow-through on this one."}
+      ]
+    }
+  ]
+}

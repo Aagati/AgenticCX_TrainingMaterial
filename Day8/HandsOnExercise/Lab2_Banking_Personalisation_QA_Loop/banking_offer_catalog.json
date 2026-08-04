@@ -1,0 +1,53 @@
+{
+  "banned_phrases": ["guaranteed approval", "no risk", "risk-free", "zero chance of denial"],
+  "products": {
+    "cashback_card": {
+      "name": "2% Cashback Credit Card",
+      "segment_fit": ["young_professional", "new_to_bank"],
+      "min_credit_band": "near_prime",
+      "min_balance": 0,
+      "pitch_points": ["2% cashback on all purchases", "no annual fee"],
+      "required_disclosure": "Cashback rewards are subject to annual caps; see the cardholder agreement for full terms."
+    },
+    "starter_credit_builder": {
+      "name": "Starter Credit Builder Card",
+      "segment_fit": ["new_to_bank"],
+      "min_credit_band": "subprime",
+      "min_balance": 0,
+      "pitch_points": ["builds credit history", "graduates to an unsecured card after 12 months on-time"],
+      "required_disclosure": "This is a secured credit-builder product; a refundable security deposit is required."
+    },
+    "high_yield_savings": {
+      "name": "High-Yield Savings",
+      "segment_fit": ["mass_affluent", "retiree"],
+      "min_credit_band": "near_prime",
+      "min_balance": 5000,
+      "pitch_points": ["above-market variable APY", "no monthly fee at this balance tier"],
+      "required_disclosure": "Annual percentage yield is variable and may change after account opening."
+    },
+    "premium_checking": {
+      "name": "Premium Checking",
+      "segment_fit": ["mass_affluent"],
+      "min_credit_band": "near_prime",
+      "min_balance": 10000,
+      "pitch_points": ["no ATM fees worldwide", "dedicated relationship banker"],
+      "required_disclosure": "A monthly maintenance fee applies if the minimum balance is not maintained."
+    },
+    "small_business_loan": {
+      "name": "Small Business Growth Loan",
+      "segment_fit": ["small_business"],
+      "min_credit_band": "near_prime",
+      "min_balance": 0,
+      "pitch_points": ["fixed-rate term loan", "no prepayment penalty"],
+      "required_disclosure": "Loan approval and terms are subject to underwriting and credit review."
+    },
+    "retiree_travel_rewards_card": {
+      "name": "Travel Rewards Card",
+      "segment_fit": ["retiree"],
+      "min_credit_band": "near_prime",
+      "min_balance": 0,
+      "pitch_points": ["3x points on travel", "no foreign transaction fees"],
+      "required_disclosure": "Rewards rate may change; see the rewards program terms for full details."
+    }
+  }
+}

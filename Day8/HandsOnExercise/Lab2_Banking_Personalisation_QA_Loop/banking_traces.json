@@ -1,0 +1,69 @@
+{
+  "traces": [
+    {
+      "trace_id": "TR-01", "customer_id": "CUST-B01", "product_offered": "cashback_card",
+      "sent_at": "2026-07-15",
+      "drafted_message": "Hi Jordan, based on your everyday spending we think our 2% Cashback Credit Card could be a great fit, with no annual fee. Cashback rewards are subject to annual caps; see the cardholder agreement for full terms."
+    },
+    {
+      "trace_id": "TR-02", "customer_id": "CUST-B02", "product_offered": "high_yield_savings",
+      "sent_at": "2026-07-15",
+      "drafted_message": "Hi Priya, with your savings balance you'd earn more in our High-Yield Savings account, at an above-market variable APY. Annual percentage yield is variable and may change after account opening."
+    },
+    {
+      "trace_id": "TR-03", "customer_id": "CUST-B03", "product_offered": "starter_credit_builder",
+      "sent_at": "2026-07-16",
+      "drafted_message": "Hi Marcus, our Starter Credit Builder Card can help you build credit history, and it graduates to an unsecured card after 12 months of on-time payments."
+    },
+    {
+      "trace_id": "TR-04", "customer_id": "CUST-B04", "product_offered": "high_yield_savings",
+      "sent_at": "2026-07-16",
+      "drafted_message": "Hi Dana, our High-Yield Savings account offers an above-market variable APY with no monthly fee at your balance tier. Annual percentage yield is variable and may change after account opening."
+    },
+    {
+      "trace_id": "TR-05", "customer_id": "CUST-B05", "product_offered": "retiree_travel_rewards_card",
+      "sent_at": "2026-07-17",
+      "drafted_message": "Hi Robert, our Travel Rewards Card earns 3x points on travel with no foreign transaction fees. Rewards rate may change; see the rewards program terms for full details."
+    },
+    {
+      "trace_id": "TR-06", "customer_id": "CUST-B06", "product_offered": "cashback_card",
+      "sent_at": "2026-07-17",
+      "drafted_message": "Hi Aisha, you're pre-qualified for guaranteed approval on our 2% Cashback Credit Card with no annual fee. Cashback rewards are subject to annual caps; see the cardholder agreement for full terms."
+    },
+    {
+      "trace_id": "TR-07", "customer_id": "CUST-B07", "product_offered": "premium_checking",
+      "sent_at": "2026-07-18",
+      "drafted_message": "Hi Liam, we'd love for you to reconsider Premium Checking — no ATM fees worldwide and a dedicated relationship banker. A monthly maintenance fee applies if the minimum balance is not maintained."
+    },
+    {
+      "trace_id": "TR-08", "customer_id": "CUST-B08", "product_offered": "starter_credit_builder",
+      "sent_at": "2026-07-18",
+      "drafted_message": "Hi Grace, our Starter Credit Builder Card is a great way to build credit history. This is a secured credit-builder product; a refundable security deposit is required."
+    },
+    {
+      "trace_id": "TR-09", "customer_id": "CUST-B09", "product_offered": "small_business_loan",
+      "sent_at": "2026-07-19",
+      "drafted_message": "Hi Victor, as a growing small business you may benefit from a second Small Business Growth Loan, fixed-rate with no prepayment penalty. Loan approval and terms are subject to underwriting and credit review."
+    },
+    {
+      "trace_id": "TR-10", "customer_id": "CUST-B10", "product_offered": "retiree_travel_rewards_card",
+      "sent_at": "2026-07-19",
+      "drafted_message": "Hi Helen, our Travel Rewards Card earns 3x points on travel with no foreign transaction fees. Rewards rate may change; see the rewards program terms for full details."
+    },
+    {
+      "trace_id": "TR-11", "customer_id": "CUST-B02", "product_offered": "high_yield_savings",
+      "sent_at": "2026-07-28",
+      "drafted_message": "Hi Priya, following up — our High-Yield Savings account is still a strong fit given your balance, at an above-market variable APY. Annual percentage yield is variable and may change after account opening."
+    },
+    {
+      "trace_id": "TR-12", "customer_id": "CUST-B01", "product_offered": "cashback_card",
+      "sent_at": "2026-07-29",
+      "drafted_message": "Hi Jordan, our 2% Cashback Credit Card is risk-free and comes with no annual fee. Cashback rewards are subject to annual caps; see the cardholder agreement for full terms."
+    },
+    {
+      "trace_id": "TR-13", "customer_id": "CUST-B06", "product_offered": "cashback_card",
+      "sent_at": "2026-07-30",
+      "drafted_message": "Hi Aisha, our 2% Cashback Credit Card has no annual fee and earns 2% back on everyday purchases. Cashback rewards are subject to annual caps; see the cardholder agreement for full terms."
+    }
+  ]
+}

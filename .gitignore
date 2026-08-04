@@ -192,6 +192,17 @@ __marimo__/
 # Local/generated state (hands-on demo data, not source)
 memory_store.json
 journey_memory.json
+campaign_memory.json
+
+# Day8 hands-on labs — runtime-generated run history/dashboards, not source
+Day8/**/analytics_runs.json
+Day8/**/goldens.json
+Day8/**/eval_runs.json
+Day8/**/kb_usage_log.json
+Day8/**/capstone_goldens.json
+Day8/**/capstone_eval_runs.json
+Day8/**/dashboard.png
+Day8/**/capstone_dashboard.png
 
 # Voice lab audio (student-recorded WAVs / synthesized replies, not source)
 **/sample_audio/

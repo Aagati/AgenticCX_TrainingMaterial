@@ -1,0 +1,24 @@
+{
+  "traces": [
+    {"trace_id": "TR-I01", "customer_id": "CUST-C01", "article_cited": "KB-01", "sent_at": "2026-07-10",
+     "response_text": "Hi Wendell, your Auto Collision Coverage pays to repair or replace your vehicle after an accident, regardless of fault, minus your deductible. Coverage is subject to the terms, conditions, and exclusions of your specific policy."},
+    {"trace_id": "TR-I02", "customer_id": "CUST-C02", "article_cited": "KB-03", "sent_at": "2026-07-10",
+     "response_text": "Hi Ines, fire and smoke damage to your dwelling and personal property is covered up to your policy's dwelling limit. Coverage is subject to the terms, conditions, and exclusions of your specific policy."},
+    {"trace_id": "TR-I03", "customer_id": "CUST-C03", "article_cited": "KB-01", "sent_at": "2026-07-11",
+     "response_text": "Hi Malik, collision coverage pays to repair or replace your vehicle after an accident, regardless of fault, minus your deductible. Coverage is subject to the terms, conditions, and exclusions of your specific policy."},
+    {"trace_id": "TR-I04", "customer_id": "CUST-C04", "article_cited": "KB-02", "sent_at": "2026-07-11",
+     "response_text": "Hi Simone, your liability claim is automatically approved and pays for injuries or property damage you cause to others, up to your policy's per-incident limit. Coverage is subject to the terms, conditions, and exclusions of your specific policy."},
+    {"trace_id": "TR-I05", "customer_id": "CUST-C05", "article_cited": "KB-04", "sent_at": "2026-07-12",
+     "response_text": "Hi Ravi, standard home policies exclude flood damage; a separate flood policy is required for coverage."},
+    {"trace_id": "TR-I06", "customer_id": "CUST-C06", "article_cited": "KB-05", "sent_at": "2026-07-12",
+     "response_text": "Hi Odalys, your deductible is the amount you pay out-of-pocket before your health plan begins covering eligible costs. Coverage is subject to the terms, conditions, and exclusions of your specific policy."},
+    {"trace_id": "TR-I07", "customer_id": "CUST-C07", "article_cited": "KB-08", "sent_at": "2026-07-13",
+     "response_text": "Hi Grant, a denied or disputed claim can be appealed in writing within 60 days; an adjuster will review within 2 weeks. Coverage is subject to the terms, conditions, and exclusions of your specific policy."},
+    {"trace_id": "TR-I08", "customer_id": "CUST-C08", "article_cited": "KB-09", "sent_at": "2026-07-13",
+     "response_text": "Hi Naledi, policies may be cancelled anytime with written notice; a prorated refund applies for prepaid premiums. Coverage is subject to the terms, conditions, and exclusions of your specific policy."},
+    {"trace_id": "TR-I09", "customer_id": "CUST-C01", "article_cited": "KB-03", "sent_at": "2026-07-28",
+     "response_text": "Hi Wendell, fire and smoke damage to your dwelling and personal property is covered up to your policy's dwelling limit. Coverage is subject to the terms, conditions, and exclusions of your specific policy."},
+    {"trace_id": "TR-I10", "customer_id": "CUST-C04", "article_cited": "KB-02", "sent_at": "2026-07-29",
+     "response_text": "Hi Simone, great news — this is a guaranteed payout under your liability coverage for injuries or property damage you cause to others. Coverage is subject to the terms, conditions, and exclusions of your specific policy."}
+  ]
+}

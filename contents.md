@@ -200,7 +200,22 @@ combine-all capstone.
 Conversation analytics & insights · Continuous QA · Personalisation engines · Knowledge management ·
 The improvement loop · Metrics that matter · Analytics pipeline · QA automation · Trace mining →
 goldens · Eval-gated updates · Personalisation in the loop · Dashboards
- 
+
+**Production-shaped only (no separate AM/hands-on tier this day — same
+treatment Day 7 gave its labs), naming follows a Lab-N pattern instead of
+PM_H*:** *Lab-1* Telecom (conversation analytics pipeline — Batches API
+insight extraction, matplotlib dashboards) · *Lab-2* Banking
+(personalisation engine fused with continuous QA — mining, goldens, an
+eval-gate decorator, prompt caching; carries personalisation since it has
+no natural home in Lab-1's analytics and Lab-3 is this day's at-risk
+self-paced slot) · *Lab-3* Retail (knowledge management — relevance vs.
+trust, deprecated-article substitution; self-paced, safe to skip) ·
+*Capstone* Insurance (fuses every primitive into one LangGraph, ships its
+own self-check so it doesn't need a facilitator to grade it). See
+`Day8/HandsOnExercise/README.md` and `Day8_Notes.md` for the full
+breakdown. Facilitator pacing: Lab-1/Lab-2 led live, Lab-3 self-paced and
+skippable, Capstone the combine-all, self-graded capstone.
+
 ### Day 9 — Enterprise CX at Scale: CCaaS, Reliability, Advanced Guardrails & Safety
 **Major topics:**
 CCaaS integration · Reliability at scale · Advanced guardrails · Identity & permissions · Compliance

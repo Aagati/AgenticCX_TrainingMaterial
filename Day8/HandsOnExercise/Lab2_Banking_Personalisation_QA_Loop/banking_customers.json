@@ -1,0 +1,55 @@
+{
+  "credit_band_rank": {"subprime": 0, "near_prime": 1, "prime": 2},
+  "customers": [
+    {
+      "customer_id": "CUST-B01", "name": "Jordan Ellis", "segment": "young_professional",
+      "credit_band": "prime", "balance": 3000, "products_held": ["checking"],
+      "prior_offers_shown": []
+    },
+    {
+      "customer_id": "CUST-B02", "name": "Priya Nair", "segment": "mass_affluent",
+      "credit_band": "prime", "balance": 25000, "products_held": ["checking", "savings", "premium_checking"],
+      "prior_offers_shown": [{"product": "premium_checking", "response": "accepted"}]
+    },
+    {
+      "customer_id": "CUST-B03", "name": "Marcus Webb", "segment": "new_to_bank",
+      "credit_band": "subprime", "balance": 200, "products_held": ["checking"],
+      "prior_offers_shown": [{"product": "cashback_card", "response": "declined"}]
+    },
+    {
+      "customer_id": "CUST-B04", "name": "Dana Whitfield", "segment": "small_business",
+      "credit_band": "prime", "balance": 15000, "products_held": ["checking", "small_business_loan"],
+      "prior_offers_shown": []
+    },
+    {
+      "customer_id": "CUST-B05", "name": "Robert Kim", "segment": "retiree",
+      "credit_band": "prime", "balance": 40000, "products_held": ["checking", "savings", "high_yield_savings"],
+      "prior_offers_shown": []
+    },
+    {
+      "customer_id": "CUST-B06", "name": "Aisha Coleman", "segment": "young_professional",
+      "credit_band": "near_prime", "balance": 1200, "products_held": ["checking"],
+      "prior_offers_shown": [{"product": "cashback_card", "response": "no_response"}]
+    },
+    {
+      "customer_id": "CUST-B07", "name": "Liam Foster", "segment": "mass_affluent",
+      "credit_band": "prime", "balance": 8000, "products_held": ["checking"],
+      "prior_offers_shown": [{"product": "premium_checking", "response": "declined"}]
+    },
+    {
+      "customer_id": "CUST-B08", "name": "Grace Okafor", "segment": "new_to_bank",
+      "credit_band": "near_prime", "balance": 500, "products_held": ["checking"],
+      "prior_offers_shown": []
+    },
+    {
+      "customer_id": "CUST-B09", "name": "Victor Salazar", "segment": "small_business",
+      "credit_band": "subprime", "balance": 2000, "products_held": ["checking", "small_business_loan"],
+      "prior_offers_shown": []
+    },
+    {
+      "customer_id": "CUST-B10", "name": "Helen Marsh", "segment": "retiree",
+      "credit_band": "prime", "balance": 6000, "products_held": ["checking", "savings"],
+      "prior_offers_shown": []
+    }
+  ]
+}
