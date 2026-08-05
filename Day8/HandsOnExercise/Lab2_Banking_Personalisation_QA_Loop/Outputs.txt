@@ -1,0 +1,85 @@
+=== Lab-2: Banking Personalisation + QA Loop — 10 customers ===
+
+--- PersonalisationEngine.rank_offers (deterministic, free) ---
+  CUST-B01 (young_professional, prime): ['cashback_card'] -> top=cashback_card
+  CUST-B02 (mass_affluent, prime): ['high_yield_savings'] -> top=high_yield_savings
+  CUST-B03 (new_to_bank, subprime): ['starter_credit_builder'] -> top=starter_credit_builder
+  CUST-B04 (small_business, prime): [] -> top=(no eligible product)
+  CUST-B05 (retiree, prime): ['retiree_travel_rewards_card'] -> top=retiree_travel_rewards_card
+  CUST-B06 (young_professional, near_prime): ['cashback_card'] -> top=cashback_card
+  CUST-B07 (mass_affluent, prime): ['high_yield_savings'] -> top=high_yield_savings
+  CUST-B08 (new_to_bank, near_prime): ['starter_credit_builder', 'cashback_card'] -> top=starter_credit_builder
+  CUST-B09 (small_business, subprime): [] -> top=(no eligible product)
+  CUST-B10 (retiree, prime): ['retiree_travel_rewards_card', 'high_yield_savings'] -> top=retiree_travel_rewards_card
+
+--- Improvement-loop cycle over 13 historical traces ---
+  Traces scanned: 13
+  Traces failing QA: 8
+  Newly promoted goldens: 0
+
+--- Eval gate verdict: PROMOTED (pass_rate=1.0) ---
+  [PASS] GOLD-001 (CUST-B03): {'eligibility_respected': True, 'no_banned_phrase': True, 'required_disclosure_present': True, 'relevance_judge': True}
+  [PASS] GOLD-002 (CUST-B04): {'eligibility_respected': True, 'no_banned_phrase': True, 'required_disclosure_present': True, 'relevance_judge': True}
+  [PASS] GOLD-003 (CUST-B05): {'eligibility_respected': True, 'no_banned_phrase': True, 'required_disclosure_present': True, 'relevance_judge': True}
+  [PASS] GOLD-004 (CUST-B06): {'eligibility_respected': True, 'no_banned_phrase': True, 'required_disclosure_present': True, 'relevance_judge': True}
+  [PASS] GOLD-005 (CUST-B07): {'eligibility_respected': True, 'no_banned_phrase': True, 'required_disclosure_present': True, 'relevance_judge': True}
+  [PASS] GOLD-006 (CUST-B09): {'eligibility_respected': True, 'no_banned_phrase': True, 'required_disclosure_present': True, 'relevance_judge': True}
+  [PASS] GOLD-007 (CUST-B10): {'eligibility_respected': True, 'no_banned_phrase': True, 'required_disclosure_present': True, 'relevance_judge': True}
+  [PASS] GOLD-008 (CUST-B01): {'eligibility_respected': True, 'no_banned_phrase': True, 'required_disclosure_present': True, 'relevance_judge': True}
+  Eval dashboard written -> eval_dashboard.png (2 gate run(s) in trend)
+
+--- Gate PROMOTED — generating today's campaign (10 real drafting calls) ---
+  CUST-B01: cashback_card
+    "Hi Jordan,
+
+As you're building your financial toolkit, our 2% Cashback Credit Card could be a great fit — you'll earn 2% cashback on all your everyday purchases, and there's no annual fee to worry about. It's a simple way to get more value from spending you're already doing.
+
+Cashback rewards are subject to annual caps; see the cardholder agreement for full terms."
+  CUST-B02: high_yield_savings
+    "Hi Priya,
+
+Since you're already enjoying the benefits of Premium Checking, I thought you'd appreciate a great way to make your idle cash work harder: our High-Yield Savings account. It offers an above-market variable APY with no monthly fee at your balance tier, so your savings can grow efficiently alongside your checking account.
+
+Annual percentage yield is variable and may change after account opening."
+  CUST-B03: starter_credit_builder
+    "Hi Marcus,
+
+Since you're just getting started with us, the Starter Credit Builder Card could be a great fit for building your credit history from the ground up. Stay on top of your payments for 12 months, and you could graduate to an unsecured card—no need to wait years to see progress. This is a secured credit-builder product; a refundable security deposit is required."
+  CUST-B04: No eligible personalized offer for CUST-B04 right now.
+  CUST-B05: retiree_travel_rewards_card
+    "Subject: A Travel Companion for Your Next Adventure, Robert
+
+Hi Robert,
+
+Since you enjoy traveling, our Travel Rewards Card could be a great fit for your journeys ahead. You'll earn 3x points on every travel purchase, and you won't have to worry about foreign transaction fees when you're exploring abroad.
+
+I'd be happy to walk you through the details whenever it's convenient for you.
+
+Rewards rate may change; see the rewards program terms for full details."
+  CUST-B06: cashback_card
+    "Hi Aisha,
+
+Following up on the 2% Cashback Credit Card — with no annual fee, it's a straightforward way to earn cashback on everyday purchases like coffee runs, transit, and online shopping, without adding another fee to your monthly expenses. Given how much busy professionals put on cards day-to-day, that cashback can add up nicely over time.
+
+Happy to answer any questions if you'd like to take a closer look.
+
+Cashback rewards are subject to annual caps; see the cardholder agreement for full terms."
+  CUST-B07: high_yield_savings
+    "Hi Liam,
+
+Since Premium Checking wasn't the right fit, I wanted to flag our High-Yield Savings account instead — it offers an above-market variable APY, and at your balance tier, there's no monthly fee to worry about. It could be a great complement to how you already manage your funds.
+
+Annual percentage yield is variable and may change after account opening."
+  CUST-B08: starter_credit_builder
+    "Hi Grace,
+
+Welcome! Since you're new to banking with us, our Starter Credit Builder Card could be a great way to build your credit history from the ground up. Stay on top of your payments for 12 months, and you'll have the opportunity to graduate to an unsecured card—no prior credit history required to get started. This is a secured credit-builder product; a refundable security deposit is required."
+  CUST-B09: No eligible personalized offer for CUST-B09 right now.
+  CUST-B10: retiree_travel_rewards_card
+    "Hi Helen,
+
+With the Travel Rewards Card, you could make your trips go further—earn 3x points on travel purchases and skip foreign transaction fees when you're exploring abroad. It's designed to reward the adventures you already love taking.
+
+Rewards rate may change; see the rewards program terms for full details."
+
+--- Persisted: goldens.json, eval_runs.json ---
