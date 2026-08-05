@@ -17,7 +17,9 @@ You'll build:
      polled to completion.
   3. InsightAggregator — stats over the batch's output (sentiment,
      escalation rate, top intents) — things the raw log can't tell you.
-  4. Dashboard.build — a 2x2 matplotlib PNG over all of the above.
+  4. Dashboard.build — a 3x2 matplotlib PNG: 4 snapshot panels over the
+     current run, plus 2 trend panels read back from analytics_runs.json
+     so a SECOND run actually shows a line, not just another snapshot.
   5. append_run — persists one run record to analytics_runs.json so a
      second run shows a trend, not just a snapshot.
 """
@@ -217,11 +219,13 @@ class Dashboard:
         volume_by_day: dict,
         csat_stats: dict,
         sentiment_breakdown: Counter,
+        history: list[dict],
         out_path: Path,
     ) -> None:
         """
-        TODO 4: Build a 2x2 matplotlib figure (figsize around (11, 8),
-        facecolor=SURFACE) and savefig it to `out_path`:
+        TODO 4: Build a 3x2 matplotlib figure (figsize around (11, 12),
+        facecolor=SURFACE) and savefig it to `out_path`. Top two rows are
+        the current-run snapshot:
           - top-left: bar, volume by channel. Bar color per channel from
             CATEGORICAL in a FIXED assignment (e.g. chat->blue, sms->
             orange, voice->aqua) — never cycle the default color rotation.
@@ -229,10 +233,19 @@ class Dashboard:
             Bar i's color = SEQUENTIAL_5[i] — low CSAT is the lightest
             step, high CSAT the darkest, so "more-is-darker" reads at a
             glance.
-          - bottom-left: line, volume by day, sorted date order on the
+          - mid-left: line, volume by day, sorted date order on the
             x-axis. Single series -> one hue (CATEGORICAL["blue"]).
-          - bottom-right: bar, sentiment breakdown in the fixed order
+          - mid-right: bar, sentiment breakdown in the fixed order
             negative/neutral/positive, colored from DIVERGING.
+        Bottom row is NEW — a cross-run trend read from `history` (the
+        full analytics_runs.json list, most recent run last):
+          - bottom-left: line of `r["metrics"]["csat"]["average"]` for
+            each record `r` in history, x-axis = run number (1-indexed).
+          - bottom-right: line of `r["insight_stats"]["escalation_rate"]`
+            the same way, in DIVERGING["negative"].
+          With fewer than 2 points a line has nothing to connect —
+          plot the single point anyway and add a small "needs 2+ runs for
+          a line" note so the panel isn't blank/confusing on a first run.
         Every panel: hairline gridlines (GRIDLINE) behind the marks, no
         chart border/spines beyond a light baseline, direct value labels
         on top of each bar (no separate legend box — a static PNG has no
@@ -291,10 +304,6 @@ if __name__ == "__main__":
         if insight.needs_escalation:
             print(f"  {conv_id}: {insight.key_issue}")
 
-    print(f"\n--- Building dashboard -> {DASHBOARD_FILE.name} ---")
-    Dashboard.build(volume_channel, volume_day, csat, sentiment, DASHBOARD_FILE)
-    print(f"  Written: {DASHBOARD_FILE}")
-
     metrics_snapshot = {
         "volume_by_channel": dict(volume_channel),
         "volume_by_day": volume_day,
@@ -310,6 +319,11 @@ if __name__ == "__main__":
     }
     record = append_run(metrics_snapshot, insight_snapshot)
     print(f"\n--- Run recorded -> {RUN_HISTORY_FILE.name} (timestamp {record['timestamp']}) ---")
+
+    print(f"\n--- Building dashboard -> {DASHBOARD_FILE.name} ---")
+    full_history = json.load(open(RUN_HISTORY_FILE, encoding="utf-8"))
+    Dashboard.build(volume_channel, volume_day, csat, sentiment, full_history, DASHBOARD_FILE)
+    print(f"  Written: {DASHBOARD_FILE} ({len(full_history)} run(s) in trend)")
 
 # Expected (hand-verified against conversation_logs.json):
 # 24 conversations, 20 unique customers, 4 repeat customers (CUST-T01/T04/T07/

@@ -28,6 +28,12 @@ build:
 New SDK surface this lab uses: prompt caching (`cache_control` on the offer
 catalog's static reference block) — the pattern for any system prompt with
 a large, reused-across-calls static portion.
+
+Given, not a TODO: EvalDashboard (reads eval_runs.json back and plots
+pass_rate as a trend line) and the __main__ ordering below, which runs the
+improvement-loop gate BEFORE generating today's campaign and skips the send
+entirely if the gate rejects — the lab's title is "without shipping a bad
+one," so the campaign has to wait on the gate, not the other way around.
 """
 
 import json
@@ -37,6 +43,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable, Literal
 
+import matplotlib
+
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 from anthropic import Anthropic
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
@@ -62,8 +72,16 @@ with open(DATA_DIR / "banking_traces.json", encoding="utf-8") as f:
 CUSTOMERS_BY_ID = {c["customer_id"]: c for c in CUSTOMERS}
 GOLDENS_FILE = DATA_DIR / "goldens.json"
 EVAL_RUNS_FILE = DATA_DIR / "eval_runs.json"
+EVAL_DASHBOARD_FILE = DATA_DIR / "eval_dashboard.png"
 
 client = Anthropic()
+
+# Chart chrome — same dataviz-skill palette Lab-1 and the Capstone use.
+INK = "#0b0b0b"
+INK_MUTED = "#898781"
+GRIDLINE = "#e1e0d9"
+SURFACE = "#fcfcfb"
+CATEGORICAL = {"blue": "#2a78d6", "orange": "#eb6834", "aqua": "#1baf7a"}
 
 
 class RelevanceJudgment(BaseModel):
@@ -303,6 +321,45 @@ def eval_gated(goldens_path: Path, pass_threshold: float = 1.0, eval_log_path: P
 generate_personalized_offer = eval_gated(goldens_path=GOLDENS_FILE)(generate_personalized_offer)
 
 
+class EvalDashboard:
+    """Given — every `.run_gate()` call already appends a record to
+    eval_runs.json; this reads that file back and plots it, so running the
+    gate more than once actually shows a trend, not just another snapshot."""
+
+    @staticmethod
+    def build(eval_history: list[dict], out_path: Path) -> None:
+        fig, ax = plt.subplots(figsize=(7, 4), facecolor=SURFACE)
+        ax.set_facecolor(SURFACE)
+        for side in ("top", "right", "left"):
+            ax.spines[side].set_visible(False)
+        ax.spines["bottom"].set_color(INK_MUTED)
+        ax.tick_params(colors=INK_MUTED, labelsize=9)
+        ax.yaxis.grid(True, color=GRIDLINE, linewidth=0.8, zorder=0)
+        ax.set_axisbelow(True)
+
+        run_idx = list(range(1, len(eval_history) + 1))
+        pass_rates = [r["pass_rate"] if r["pass_rate"] is not None else 0.0 for r in eval_history]
+
+        if len(eval_history) >= 2:
+            ax.plot(run_idx, pass_rates, color=CATEGORICAL["blue"], linewidth=2, marker="o", markersize=5, zorder=3)
+        elif eval_history:
+            ax.plot(run_idx, pass_rates, color=CATEGORICAL["blue"], marker="o", markersize=6, zorder=3)
+            ax.set_xlim(0, 2)
+            ax.text(0.5, 0.1, "needs 2+ gate runs for a line", transform=ax.transAxes, ha="center",
+                     color=INK_MUTED, fontsize=8)
+        else:
+            ax.text(0.5, 0.5, "no gate runs logged yet", transform=ax.transAxes, ha="center", va="center",
+                     color=INK_MUTED, fontsize=9)
+        ax.axhline(1.0, color=INK_MUTED, linewidth=0.8, linestyle="--", zorder=2)
+        ax.set_ylim(-0.05, 1.1)
+        ax.set_xticks(run_idx)
+        ax.set_title(f"Eval-gate pass rate across runs (n={len(eval_history)})", color=INK, fontsize=11, loc="left", fontweight="bold")
+
+        fig.tight_layout()
+        fig.savefig(out_path, dpi=130, facecolor=SURFACE)
+        plt.close(fig)
+
+
 class ImprovementLoop:
     """Given — the one function you'd actually schedule nightly: mine
     yesterday's traces, capture new failures as goldens, and prove the
@@ -331,15 +388,9 @@ if __name__ == "__main__":
         print(f"  {customer['customer_id']} ({customer['segment']}, {customer['credit_band']}): "
               f"{[c['product_id'] for c in ranked]} -> top={summary}")
 
-    print(f"\n--- Generating today's campaign ({len(CUSTOMERS)} real drafting calls) ---")
-    for customer in CUSTOMERS:
-        offer = generate_personalized_offer(customer)
-        if offer["product_offered"]:
-            print(f"  {customer['customer_id']}: {offer['product_offered']}")
-            print(f"    \"{offer['message']}\"")
-        else:
-            print(f"  {customer['customer_id']}: {offer['message']}")
-
+    # Gate BEFORE campaign, not after: this lab's whole thesis is shipping a
+    # smarter engine WITHOUT shipping a bad one — running the gate after the
+    # send would mean you already shipped the bad one by the time you found out.
     print(f"\n--- Improvement-loop cycle over {len(TRACES)} historical traces ---")
     cycle = ImprovementLoop.run_cycle(TRACES)
     print(f"  Traces scanned: {cycle['traces_scanned']}")
@@ -352,6 +403,23 @@ if __name__ == "__main__":
     for result in gate["results"]:
         mark = "PASS" if result["passed"] else "FAIL"
         print(f"  [{mark}] {result['golden_id']} ({result['customer_id']}): {result['checks']}")
+
+    eval_history = json.load(open(EVAL_RUNS_FILE, encoding="utf-8")) if EVAL_RUNS_FILE.exists() else []
+    EvalDashboard.build(eval_history, EVAL_DASHBOARD_FILE)
+    print(f"  Eval dashboard written -> {EVAL_DASHBOARD_FILE.name} ({len(eval_history)} gate run(s) in trend)")
+
+    if gate["promoted"]:
+        print(f"\n--- Gate PROMOTED — generating today's campaign ({len(CUSTOMERS)} real drafting calls) ---")
+        for customer in CUSTOMERS:
+            offer = generate_personalized_offer(customer)
+            if offer["product_offered"]:
+                print(f"  {customer['customer_id']}: {offer['product_offered']}")
+                print(f"    \"{offer['message']}\"")
+            else:
+                print(f"  {customer['customer_id']}: {offer['message']}")
+    else:
+        print(f"\n--- Gate REJECTED (pass_rate={gate['pass_rate']}) — campaign send SKIPPED ---")
+        print("  Fix the failing goldens above and rerun before shipping today's campaign.")
 
     print(f"\n--- Persisted: {GOLDENS_FILE.name}, {EVAL_RUNS_FILE.name} ---")
 

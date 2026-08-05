@@ -224,9 +224,10 @@ class Dashboard:
         volume_by_day: dict,
         csat_stats: dict,
         sentiment_breakdown: Counter,
+        history: list[dict],
         out_path: Path,
     ) -> None:
-        fig, axes = plt.subplots(2, 2, figsize=(11, 8), facecolor=SURFACE)
+        fig, axes = plt.subplots(3, 2, figsize=(11, 12), facecolor=SURFACE)
         for ax in axes.flat:
             ax.set_facecolor(SURFACE)
             for side in ("top", "right", "left"):
@@ -270,6 +271,35 @@ class Dashboard:
                        color=[DIVERGING[s] for s in sent_order], width=0.6, zorder=3)
         ax.bar_label(bars, color=INK, fontsize=9, padding=3)
         ax.set_title("Sentiment breakdown", color=INK, fontsize=11, loc="left", fontweight="bold")
+
+        # bottom row: cross-run trend — the payoff of analytics_runs.json persistence.
+        # Every run appends a record; this reads them all back so a dashboard that's
+        # been run more than once actually shows a line, not just another snapshot.
+        run_idx = list(range(1, len(history) + 1))
+        csat_series = [r["metrics"]["csat"]["average"] for r in history]
+        escalation_series = [r["insight_stats"]["escalation_rate"] for r in history]
+
+        ax = axes[2, 0]
+        if len(history) >= 2:
+            ax.plot(run_idx, csat_series, color=CATEGORICAL["blue"], linewidth=2, marker="o", markersize=5, zorder=3)
+        else:
+            ax.plot(run_idx, csat_series, color=CATEGORICAL["blue"], marker="o", markersize=6, zorder=3)
+            ax.set_xlim(0, 2)
+            ax.text(0.5, 0.15, "needs 2+ runs for a line", transform=ax.transAxes, ha="center",
+                     color=INK_MUTED, fontsize=8)
+        ax.set_xticks(run_idx)
+        ax.set_title(f"CSAT average across runs (n={len(history)})", color=INK, fontsize=11, loc="left", fontweight="bold")
+
+        ax = axes[2, 1]
+        if len(history) >= 2:
+            ax.plot(run_idx, escalation_series, color=DIVERGING["negative"], linewidth=2, marker="o", markersize=5, zorder=3)
+        else:
+            ax.plot(run_idx, escalation_series, color=DIVERGING["negative"], marker="o", markersize=6, zorder=3)
+            ax.set_xlim(0, 2)
+            ax.text(0.5, 0.15, "needs 2+ runs for a line", transform=ax.transAxes, ha="center",
+                     color=INK_MUTED, fontsize=8)
+        ax.set_xticks(run_idx)
+        ax.set_title(f"Escalation rate across runs (n={len(history)})", color=INK, fontsize=11, loc="left", fontweight="bold")
 
         fig.suptitle("Telecom Conversation Analytics", color=INK, fontsize=14, fontweight="bold", x=0.02, ha="left")
         fig.tight_layout(rect=(0, 0, 1, 0.96))
@@ -332,10 +362,6 @@ if __name__ == "__main__":
         if insight.needs_escalation:
             print(f"  {conv_id}: {insight.key_issue}")
 
-    print(f"\n--- Building dashboard -> {DASHBOARD_FILE.name} ---")
-    Dashboard.build(volume_channel, volume_day, csat, sentiment, DASHBOARD_FILE)
-    print(f"  Written: {DASHBOARD_FILE}")
-
     metrics_snapshot = {
         "volume_by_channel": dict(volume_channel),
         "volume_by_day": volume_day,
@@ -351,6 +377,11 @@ if __name__ == "__main__":
     }
     record = append_run(metrics_snapshot, insight_snapshot)
     print(f"\n--- Run recorded -> {RUN_HISTORY_FILE.name} (timestamp {record['timestamp']}) ---")
+
+    print(f"\n--- Building dashboard -> {DASHBOARD_FILE.name} ---")
+    full_history = json.load(open(RUN_HISTORY_FILE, encoding="utf-8"))
+    Dashboard.build(volume_channel, volume_day, csat, sentiment, full_history, DASHBOARD_FILE)
+    print(f"  Written: {DASHBOARD_FILE} ({len(full_history)} run(s) in trend)")
 
 # Expected (hand-verified against conversation_logs.json):
 # 24 conversations, 20 unique customers, 4 repeat customers (CUST-T01/T04/T07/
