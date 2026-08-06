@@ -1,0 +1,16 @@
+{
+  "customers": [
+    {"customer_id": "CUST-RT01", "name": "Nora Fields", "email": "nora.fields@example.com"},
+    {"customer_id": "CUST-RT02", "name": "Leo Grant", "email": "leo.grant@example.com"},
+    {"customer_id": "CUST-RT03", "name": "Ivy Chen", "email": "ivy.chen@example.com"},
+    {"customer_id": "CUST-RT04", "name": "Marcus Webb", "email": "marcus.webb@example.com"},
+    {"customer_id": "CUST-RT05", "name": "Talia Ross", "email": "talia.ross@example.com"},
+    {"customer_id": "CUST-RT06", "name": "Ben Ortiz", "email": "ben.ortiz@example.com"},
+    {"customer_id": "CUST-RT07", "name": "Ruth Kaplan", "email": "ruth.kaplan@example.com"},
+    {"customer_id": "CUST-RT08", "name": "Sam Duarte", "email": "sam.duarte@example.com"},
+    {"customer_id": "CUST-RT09", "name": "Wren Ellis", "email": "wren.ellis@example.com"},
+    {"customer_id": "CUST-RT10", "name": "Cole Baptiste", "email": "cole.baptiste@example.com"},
+    {"customer_id": "CUST-RT11", "name": "Ada Simmons", "email": "ada.simmons@example.com"},
+    {"customer_id": "CUST-RT12", "name": "Theo Marsh", "email": "theo.marsh@example.com"}
+  ]
+}

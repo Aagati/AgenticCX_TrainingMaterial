@@ -1,0 +1,34 @@
+{
+  "roles": {
+    "tier1_support": {
+      "actions": ["view_status", "draft_response"],
+      "max_payout_authority": 0,
+      "can_view_full_policy_number": false,
+      "scope": "own_customers_only"
+    },
+    "claims_adjuster": {
+      "actions": ["view_status", "draft_response", "issue_payout", "close_claim"],
+      "max_payout_authority": 5000,
+      "can_view_full_policy_number": true,
+      "scope": "own_customers_only"
+    },
+    "senior_adjuster": {
+      "actions": ["view_status", "draft_response", "issue_payout", "close_claim", "override_denial"],
+      "max_payout_authority": 50000,
+      "can_view_full_policy_number": true,
+      "scope": "any"
+    },
+    "fraud_investigator": {
+      "actions": ["view_status", "flag_fraud"],
+      "max_payout_authority": 0,
+      "can_view_full_policy_number": true,
+      "scope": "any"
+    }
+  },
+  "actors": {
+    "AG-101": {"role": "tier1_support", "assigned_customers": ["CUST-IN01", "CUST-IN02", "CUST-IN03", "CUST-IN04"]},
+    "AG-205": {"role": "claims_adjuster", "assigned_customers": ["CUST-IN01", "CUST-IN02", "CUST-IN05", "CUST-IN06", "CUST-IN09", "CUST-IN10"]},
+    "AG-310": {"role": "senior_adjuster", "assigned_customers": null},
+    "AG-450": {"role": "fraud_investigator", "assigned_customers": null}
+  }
+}

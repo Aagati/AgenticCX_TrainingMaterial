@@ -1,0 +1,25 @@
+{
+  "jurisdictions": {
+    "NY": {
+      "required_disclosure": "This is not a final claim determination; coverage is subject to your policy terms and New York insurance regulations.",
+      "requires_written_confirmation_above": 5000,
+      "prohibited_phrases": ["guaranteed payout", "no questions asked", "this is our final decision on your claim"]
+    },
+    "CA": {
+      "required_disclosure": "This is not a final claim determination; coverage is subject to your policy terms and California insurance regulations.",
+      "requires_written_confirmation_above": 2500,
+      "prohibited_phrases": ["guaranteed payout", "no questions asked", "this is our final decision on your claim", "automatic approval"]
+    },
+    "TX": {
+      "required_disclosure": "This is not a final claim determination; coverage is subject to your policy terms and Texas insurance regulations.",
+      "requires_written_confirmation_above": 10000,
+      "prohibited_phrases": ["guaranteed payout", "no questions asked", "automatic approval"]
+    },
+    "DEFAULT": {
+      "required_disclosure": "This is not a final claim determination; coverage is subject to your policy terms and applicable state insurance regulations.",
+      "requires_written_confirmation_above": 1000,
+      "prohibited_phrases": ["guaranteed payout", "no questions asked", "automatic approval", "this is our final decision on your claim"]
+    }
+  },
+  "written_confirmation_sentence": "Because this claim amount requires written confirmation in your jurisdiction, please reply in writing to confirm you'd like to proceed."
+}

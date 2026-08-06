@@ -1,0 +1,14 @@
+{
+  "customers": [
+    {"customer_id": "CUST-BK01", "name": "Priya Shah", "jurisdiction": "NY", "account_number": "ACCT-10010001", "dispute_id": "DSP-7001", "dispute_amount": 500, "requesting_actor": "BA-101", "pending_question": "Can you credit the disputed charge while you investigate?"},
+    {"customer_id": "CUST-BK02", "name": "Miguel Santos", "jurisdiction": "CA", "account_number": "ACCT-10010002", "dispute_id": "DSP-7002", "dispute_amount": 3400, "requesting_actor": "BA-207", "pending_question": "Can you issue a provisional credit for this dispute?"},
+    {"customer_id": "CUST-BK03", "name": "Aisha Bello", "jurisdiction": "NY", "account_number": "ACCT-10010003", "dispute_id": "DSP-7003", "dispute_amount": 900, "requesting_actor": "BA-101", "pending_question": "Can you credit the disputed charge while you investigate?"},
+    {"customer_id": "CUST-BK04", "name": "Derek Lin", "jurisdiction": "TX", "account_number": "ACCT-10010004", "dispute_id": "DSP-7004", "dispute_amount": 3400, "requesting_actor": "BA-207", "pending_question": "Can you issue a provisional credit for this dispute?"},
+    {"customer_id": "CUST-BK05", "name": "Farah Haidari", "jurisdiction": "CA", "account_number": "ACCT-10010005", "dispute_id": "DSP-7005", "dispute_amount": 1500, "requesting_actor": "BA-101", "pending_question": "Can you credit the disputed charge while you investigate?"},
+    {"customer_id": "CUST-BK06", "name": "Connor Blake", "jurisdiction": "NY", "account_number": "ACCT-10010006", "dispute_id": "DSP-7006", "dispute_amount": 2000, "requesting_actor": "BA-207", "pending_question": "Can you issue a provisional credit for this dispute?"},
+    {"customer_id": "CUST-BK07", "name": "Nadia Petrova", "jurisdiction": "TX", "account_number": "ACCT-10010007", "dispute_id": "DSP-7007", "dispute_amount": 800, "requesting_actor": "BA-101", "pending_question": "Can you credit the disputed charge while you investigate?"},
+    {"customer_id": "CUST-BK08", "name": "Owen McKay", "jurisdiction": "CA", "account_number": "ACCT-10010008", "dispute_id": "DSP-7008", "dispute_amount": 1200, "requesting_actor": "BA-330", "pending_question": "This charge looks suspicious, can you review it?"},
+    {"customer_id": "CUST-BK09", "name": "Renata Alves", "jurisdiction": "NY", "account_number": "ACCT-10010009", "dispute_id": "DSP-7009", "dispute_amount": 12500, "requesting_actor": "BA-207", "pending_question": "Can you issue a provisional credit for this dispute?"},
+    {"customer_id": "CUST-BK10", "name": "Jonah Wexler", "jurisdiction": "TX", "account_number": "ACCT-10010010", "dispute_id": "DSP-7010", "dispute_amount": 700, "requesting_actor": "BA-101", "pending_question": "Can you credit the disputed charge while you investigate?"}
+  ]
+}

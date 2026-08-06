@@ -204,6 +204,15 @@ Day8/**/capstone_eval_runs.json
 Day8/**/dashboard.png
 Day8/**/capstone_dashboard.png
 
+# Day9 hands-on labs — runtime-generated run history/dashboards, not source
+Day9/**/resilience_runs.json
+Day9/**/guardrail_audit_log.json
+Day9/**/redacted_trace_log.json
+Day9/**/capstone_audit_chain.json
+Day9/**/capstone_goldens.json
+Day9/**/capstone_eval_runs.json
+Day9/**/capstone_dashboard.png
+
 # Voice lab audio (student-recorded WAVs / synthesized replies, not source)
 **/sample_audio/
 **/sample_audio_h3/

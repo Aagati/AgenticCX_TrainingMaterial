@@ -1,0 +1,15 @@
+{
+  "queues": [
+    {"queue_id": "Q-BILLING", "skill": "billing", "max_concurrent": 3, "handle_seconds": 90},
+    {"queue_id": "Q-TECH-1", "skill": "technical", "max_concurrent": 2, "handle_seconds": 90},
+    {"queue_id": "Q-TECH-2", "skill": "technical", "max_concurrent": 1, "handle_seconds": 90},
+    {"queue_id": "Q-RETENTION", "skill": "retention", "max_concurrent": 2, "handle_seconds": 90},
+    {"queue_id": "Q-OVERFLOW", "skill": null, "max_concurrent": 999, "handle_seconds": 60}
+  ],
+  "routing_chains": {
+    "billing": ["Q-BILLING", "Q-OVERFLOW"],
+    "technical": ["Q-TECH-1", "Q-TECH-2", "Q-OVERFLOW"],
+    "retention": ["Q-RETENTION", "Q-OVERFLOW"],
+    "other": ["Q-OVERFLOW"]
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "patterns": [
+    {"name": "api_key", "severity": "critical", "pattern": "sk-(?:live|test)-\\w{8,}", "replacement": "[API_KEY_REDACTED]"},
+    {"name": "card_number", "severity": "critical", "pattern": "\\b(?<!ORD-)\\d(?:[ -]?\\d){12,18}", "replacement": "[CARD_REDACTED]"},
+    {"name": "govt_id", "severity": "high", "pattern": "\\d{3}-\\d{2}-\\d{4}", "replacement": "[GOVT_ID_REDACTED]"},
+    {"name": "email", "severity": "medium", "pattern": "[\\w.+-]+@[\\w-]+\\.[\\w.-]+", "replacement": "[EMAIL_REDACTED]"},
+    {"name": "phone", "severity": "medium", "pattern": "\\b(?:\\+?1[-.\\s]?)?\\(?\\d{3}\\)?[-.\\s]\\d{3}[-.\\s]\\d{4}\\b", "replacement": "[PHONE_REDACTED]"}
+  ]
+}

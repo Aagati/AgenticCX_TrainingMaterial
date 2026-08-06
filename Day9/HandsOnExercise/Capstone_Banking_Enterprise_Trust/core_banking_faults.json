@@ -1,0 +1,14 @@
+{
+  "faults": {
+    "DSP-7001": {"t": 0, "behavior": "ok"},
+    "DSP-7002": {"t": 30, "behavior": "ok"},
+    "DSP-7003": {"t": 60, "behavior": "fail_always"},
+    "DSP-7004": {"t": 90, "behavior": "fail_always"},
+    "DSP-7006": {"t": 120, "behavior": "fail_always"},
+    "DSP-7007": {"t": 150, "behavior": "ok"},
+    "DSP-7009": {"t": 180, "behavior": "ok"},
+    "DSP-7010": {"t": 210, "behavior": "fail_once"},
+    "DSP-7005": {"t": 999, "behavior": "ok"},
+    "DSP-7008": {"t": 999, "behavior": "ok"}
+  }
+}

@@ -221,6 +221,26 @@ skippable, Capstone the combine-all, self-graded capstone.
 CCaaS integration · Reliability at scale · Advanced guardrails · Identity & permissions · Compliance
 at scale · Cost & capacity · Routing & handoff · Resilience engineering · Guardrail stack · Audit &
 governance · Capacity & cost · Security
+
+**Production-shaped only (no separate AM/hands-on tier this day — same treatment Day 7 and Day 8
+gave their labs), naming follows Day 8's `Lab-N` / `Capstone` pattern:** *Lab-1* Telecom (contact
+center resilience — a simulated CCaaS shift with skill-based routing, a real capacity governor, a
+hand-rolled circuit breaker over a flaky downstream dependency, retry with exponential backoff and
+full jitter, and cost-tiered drafting; carries five of the day's twelve topics because they're all
+one mechanism — a contact under load — seen from five angles) · *Lab-2* Insurance (the guardrail
+stack — nine ordered layers across input/permission/output/compliance groups returning PASS, BLOCK
+or REDACT, role-based access control with a numeric authority ceiling, jurisdiction-keyed compliance
+rules, and a hash-chained tamper-evident audit log; carries the other five) · *Lab-3* Retail
+(security — deterministic PII/secret redaction at the persistence boundary, plus an outbound leak
+check; self-paced, safe to skip) · *Capstone* Banking (fuses every primitive into one LangGraph with
+two conditional routers and one repair cycle, ships its own fourteen-assertion self-check — and, new
+to this curriculum, explicitly advances four **named** mechanics from earlier days: Day 4's
+idempotent audited action now actually retried under a circuit breaker, Day 4's per-user permission
+check generalized into role-based access control with a credit ceiling, Day 5's governance pack and
+ROI floor-gate turned into runtime policy and a live capacity dashboard, and Day 8's eval-gate plus
+Batches API turned on the guardrail stack itself with a two-sided pass/fail metric). See
+`Day9/HandsOnExercise/README.md` and `Day9_Notes.md` for the full breakdown. Facilitator pacing:
+Lab-1/Lab-2 led live, Lab-3 self-paced and skippable, Capstone the combine-all, self-graded capstone.
  
 ### Day 10 — Capstone Build & Shark Tank Finale
 **Major topics:**

@@ -1,0 +1,60 @@
+{
+  "transcripts": [
+    {"transcript_id": "TR-R01", "customer_id": "CUST-RT01", "channel": "chat",
+     "turns": [{"role": "customer", "text": "Hi, I need to update the card on file, the number is 4532110288219901."}],
+     "pending_question": "Can you confirm the new card is saved on my account?", "expected_findings": ["card_number"]},
+
+    {"transcript_id": "TR-R02", "customer_id": "CUST-RT02", "channel": "chat",
+     "turns": [{"role": "customer", "text": "When will my order ship? It's been three days."}],
+     "pending_question": "When will my order ship?", "expected_findings": []},
+
+    {"transcript_id": "TR-R03", "customer_id": "CUST-RT03", "channel": "voice",
+     "turns": [{"role": "customer", "text": "The card number is 4532 1102 8821 9901, can you retry the charge?"}],
+     "pending_question": "Can you retry the charge with this card?", "expected_findings": ["card_number"]},
+
+    {"transcript_id": "TR-R04", "customer_id": "CUST-RT04", "channel": "chat",
+     "turns": [{"role": "customer", "text": "For identity verification my SSN is 123-45-6789 and my phone is 555-867-5309."}],
+     "pending_question": "Can you verify my identity with these details?", "expected_findings": ["govt_id", "phone"]},
+
+    {"transcript_id": "TR-R05", "customer_id": "CUST-RT05", "channel": "chat",
+     "turns": [
+       {"role": "customer", "text": "My card starts 4532 1102"},
+       {"role": "customer", "text": "and ends 8821 9901, please charge the balance."}
+     ],
+     "pending_question": "Can you charge the remaining balance?", "expected_findings": []},
+
+    {"transcript_id": "TR-R06", "customer_id": "CUST-RT06", "channel": "sms",
+     "turns": [{"role": "customer", "text": "Can I return an item without the original box?"}],
+     "pending_question": "Can I return an item without the original box?", "expected_findings": []},
+
+    {"transcript_id": "TR-R07", "customer_id": "CUST-RT07", "channel": "chat",
+     "turns": [{"role": "customer", "text": "My order number is ORD-4532110288219901, where is it?"}],
+     "pending_question": "Where is my order?", "expected_findings": []},
+
+    {"transcript_id": "TR-R08", "customer_id": "CUST-RT08", "channel": "chat",
+     "turns": [{"role": "customer", "text": "Do you price-match a competitor's listing?"}],
+     "pending_question": "Do you price-match a competitor's listing?", "expected_findings": []},
+
+    {"transcript_id": "TR-R09", "customer_id": "CUST-RT09", "channel": "chat",
+     "turns": [
+       {"role": "customer", "text": "Can you check if my refund from last week went through?"},
+       {"role": "agent", "text": "One moment - I see a related note on file from jane.doe@example.com about a similar refund."}
+     ],
+     "pending_question": "Did my refund go through?", "expected_findings": ["email"]},
+
+    {"transcript_id": "TR-R10", "customer_id": "CUST-RT10", "channel": "voice",
+     "turns": [{"role": "customer", "text": "What's your holiday return window this year?"}],
+     "pending_question": "What's your holiday return window this year?", "expected_findings": []},
+
+    {"transcript_id": "TR-R11", "customer_id": "CUST-RT11", "channel": "chat",
+     "turns": [
+       {"role": "customer", "text": "The checkout page keeps failing, can you see what's wrong?"},
+       {"role": "agent", "text": "Checking now - re-running the test with key sk-live-8f2b91c4d7e0 to reproduce."}
+     ],
+     "pending_question": "Why does checkout keep failing?", "expected_findings": ["api_key"]},
+
+    {"transcript_id": "TR-R12", "customer_id": "CUST-RT12", "channel": "chat",
+     "turns": [{"role": "customer", "text": "Is the blue jacket restocking in size medium?"}],
+     "pending_question": "Is the blue jacket restocking in size medium?", "expected_findings": []}
+  ]
+}

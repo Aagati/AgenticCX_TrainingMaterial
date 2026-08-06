@@ -1,0 +1,41 @@
+{
+  "agent_card": {
+    "agent_id": "AG-BANK-DAY9",
+    "purpose": "Resolve card/account disputes by issuing provisional credit within policy limits.",
+    "approval_threshold": 10000,
+    "human_fallback_queue": "Tier2_Banking_Disputes"
+  },
+  "roles": {
+    "tier1_support": {"actions": ["issue_provisional_credit", "view_status"], "max_credit_authority": 1000},
+    "senior_adjuster": {"actions": ["issue_provisional_credit", "view_status", "override_denial"], "max_credit_authority": 15000},
+    "fraud_investigator": {"actions": ["view_status", "flag_fraud"], "max_credit_authority": 0}
+  },
+  "actors": {
+    "BA-101": {"role": "tier1_support"},
+    "BA-207": {"role": "senior_adjuster"},
+    "BA-330": {"role": "fraud_investigator"}
+  },
+  "jurisdictions": {
+    "NY": {
+      "required_disclosure": "This provisional credit is not a final resolution; it may be reversed pending investigation under New York banking regulations.",
+      "requires_written_confirmation_above": 5000,
+      "prohibited_phrases": ["guaranteed reversal", "no questions asked", "this dispute is fully resolved"]
+    },
+    "CA": {
+      "required_disclosure": "This provisional credit is not a final resolution; it may be reversed pending investigation under California banking regulations.",
+      "requires_written_confirmation_above": 2500,
+      "prohibited_phrases": ["guaranteed reversal", "no questions asked", "this dispute is fully resolved", "automatic approval"]
+    },
+    "TX": {
+      "required_disclosure": "This provisional credit is not a final resolution; it may be reversed pending investigation under Texas banking regulations.",
+      "requires_written_confirmation_above": 10000,
+      "prohibited_phrases": ["guaranteed reversal", "no questions asked", "automatic approval"]
+    },
+    "DEFAULT": {
+      "required_disclosure": "This provisional credit is not a final resolution; it may be reversed pending investigation under applicable state banking regulations.",
+      "requires_written_confirmation_above": 1000,
+      "prohibited_phrases": ["guaranteed reversal", "no questions asked", "automatic approval", "this dispute is fully resolved"]
+    }
+  },
+  "written_confirmation_sentence": "Because this credit amount requires written confirmation in your jurisdiction, please reply in writing to confirm you'd like to proceed."
+}

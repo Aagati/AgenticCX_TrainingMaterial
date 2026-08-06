@@ -1,0 +1,9 @@
+{
+  "agents": [
+    {"agent_id": "HA-101", "skills": ["billing"], "available": true},
+    {"agent_id": "HA-102", "skills": ["technical"], "available": true},
+    {"agent_id": "HA-103", "skills": ["retention"], "available": true},
+    {"agent_id": "HA-104", "skills": ["escalation"], "available": false},
+    {"agent_id": "HA-105", "skills": ["technical", "billing"], "available": true}
+  ]
+}

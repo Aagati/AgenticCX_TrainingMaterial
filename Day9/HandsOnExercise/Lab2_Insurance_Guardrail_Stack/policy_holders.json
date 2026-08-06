@@ -1,0 +1,14 @@
+{
+  "customers": [
+    {"customer_id": "CUST-IN01", "name": "Dana Whitfield", "jurisdiction": "NY", "policy_number": "POL-IN-1001", "pending_question": "What's the status of my water-damage claim?"},
+    {"customer_id": "CUST-IN02", "name": "Marcus Cole", "jurisdiction": "CA", "policy_number": "POL-IN-1002", "pending_question": "Can you confirm my claim payout amount?"},
+    {"customer_id": "CUST-IN03", "name": "Priya Nair", "jurisdiction": "TX", "policy_number": "POL-IN-1003", "pending_question": "When will my payout be processed?"},
+    {"customer_id": "CUST-IN04", "name": "Evan Brooks", "jurisdiction": "NY", "policy_number": "POL-IN-1004", "pending_question": "Has a decision been made on my claim yet?"},
+    {"customer_id": "CUST-IN05", "name": "Sana Iqbal", "jurisdiction": "CA", "policy_number": "POL-IN-1005", "pending_question": "Can you issue my approved payout?"},
+    {"customer_id": "CUST-IN06", "name": "Tomás Reyes", "jurisdiction": "TX", "policy_number": "POL-IN-1006", "pending_question": "Is my claim decision final?"},
+    {"customer_id": "CUST-IN07", "name": "Grace Liu", "jurisdiction": "NY", "policy_number": "POL-IN-1007", "pending_question": "Can someone check on my claim status?"},
+    {"customer_id": "CUST-IN08", "name": "Owen Park", "jurisdiction": "MA", "policy_number": "POL-IN-1008", "pending_question": "I think there may be a duplicate submission on my account."},
+    {"customer_id": "CUST-IN09", "name": "Renee Foster", "jurisdiction": "CA", "policy_number": "POL-IN-1009", "pending_question": "Please issue the payout we discussed."},
+    {"customer_id": "CUST-IN10", "name": "Aiden Cross", "jurisdiction": "TX", "policy_number": "POL-IN-1010", "pending_question": "What's the current status of my claim?"}
+  ]
+}
